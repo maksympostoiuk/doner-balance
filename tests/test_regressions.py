@@ -1,5 +1,6 @@
 """Regression tests for bugs found in the second-pass code review."""
 
+import copy
 import math
 
 import pandas as pd
@@ -142,3 +143,126 @@ def test_replan_interval_comes_from_config(default_cfg, monkeypatch):
     sim.run()
     gaps = [b - a for a, b in zip(calls, calls[1:], strict=False)]
     assert min(gaps) <= 7.0 and max(gaps) <= 7.0 + 1e-9
+
+
+# --------------------------------------------------------------------------- validation & security
+
+
+@pytest.mark.parametrize("mutate, message", [
+    (lambda d: d["strategies"].update({"../../etc/x": d["strategies"]["best_roi"]}), "should match pattern"),
+    (lambda d: d["tiers"][0]["staff"][0].update(id="nephew.x"), "should match pattern"),
+    (lambda d: d["tiers"][0].update(name=""), "at least 1 character"),
+    (lambda d: d["events"].append(copy.deepcopy(d["events"][0])), "event ids must be unique"),
+    (lambda d: d["events"][0]["responses"].append(copy.deepcopy(d["events"][0]["responses"][0])),
+     "response ids must be unique"),
+    (lambda d: d["profiles"]["regular"].update(sessions_per_day=100, session_minutes=10), "sessions overlap"),
+    (lambda d: d["profiles"]["regular"].update(first_session_minutes=400), "sessions overlap"),
+    (lambda d: d["tiers"][1].update(free_staff_levels={"waiter": 0}), "greater than or equal to 1"),
+    (lambda d: d["tiers"][1]["staff"][0].update(max_level=1) or d["tiers"][1].update(free_staff_levels={"waiter": 3}),
+     "exceeds max_level"),
+    (lambda d: d["tiers"][1].update(staff=[]), "at least 1 item"),
+    (lambda d: d["events"][0]["responses"][0]["effects"].append({"cash_loss": {"flat": 1}, "duration_hours": 2}),
+     "duration_hours only makes sense"),
+    (lambda d: d["analysis"].update(tap_share_low_pct=70, tap_share_high_pct=60), "tap_share_low_pct"),
+    (lambda d: d["simulation"].update(extra_seeds=[42]), "must all be different"),
+    (lambda d: d["simulation"].update(days=0), "greater than 0"),
+    (lambda d: d["pacing"]["targets"][0].update(lever="tier:moon"), "unknown tier"),
+    (lambda d: d["pacing"]["targets"][0].update(lever="tap.upgrades.ghost.base_cost"), "matches nothing"),
+    (lambda d: d["pacing"]["targets"][0].update(lever="offline.requires_manager"), "is not a number"),
+])
+def test_new_validation_rules(mutate, message):
+    from pydantic import ValidationError
+
+    d = _default_dict()
+    mutate(d)
+    with pytest.raises(ValidationError, match=message):
+        config_from_dict(d)
+
+
+def test_dotted_path_helpers_edge_cases():
+    from doner_balance.config import expand_path, get_path, set_path
+
+    d = _default_dict()
+    assert expand_path(d, "profiles.*.session_minutes") == ["profiles.regular.session_minutes",
+                                                            "profiles.casual.session_minutes"]
+    set_path(d, "staff_milestones.0", {"level": 30, "mult": 2})
+    assert d["staff_milestones"][0] == {"level": 30, "mult": 2}
+    with pytest.raises(KeyError):
+        set_path(d, "tiers.moon.unlock_cost", 1)
+    with pytest.raises(KeyError):
+        get_path(d, "tiers.cafe.staff.ghost.income")
+
+
+def test_scale_lever_keeps_ints_and_ignores_bools():
+    from doner_balance.tuning import scale_lever
+
+    d = _default_dict()
+    new = scale_lever(d, ["tap.upgrades.knife.max_level", "offline.requires_manager", "tiers.cafe.unlock_cost"], 0.5)
+    assert new["tap"]["upgrades"][0]["max_level"] == 25 and isinstance(new["tap"]["upgrades"][0]["max_level"], int)
+    assert new["offline"]["requires_manager"] is True
+    assert new["tiers"][1]["unlock_cost"] == pytest.approx(15000)
+
+
+@pytest.mark.parametrize("v", [0, 3, 0.25, 4.3e7, 1e13, 2.5e-5, 1e-7, -3.2e8, 123456.5])
+def test_format_yaml_number_round_trips(v):
+    from doner_balance.tuning import format_yaml_number
+
+    loaded = yaml.safe_load(format_yaml_number(v))
+    assert isinstance(loaded, (int, float))
+    assert loaded == pytest.approx(v, rel=5e-3)
+
+
+def test_format_yaml_number_rejects_inf():
+    from doner_balance.tuning import format_yaml_number
+
+    with pytest.raises(ValueError):
+        format_yaml_number(math.inf)
+
+
+def _run_cli(args, capsys):
+    from doner_balance.cli import main
+
+    rc = main(args)
+    return rc, capsys.readouterr()
+
+
+def test_cli_reports_errors_without_traceback(tmp_path, capsys):
+    rc, out = _run_cli(["--config", str(tmp_path / "missing.yaml"), "validate"], capsys)
+    assert rc == 2 and "not found" in out.err
+    empty = tmp_path / "empty.yaml"
+    empty.write_text("")
+    rc, out = _run_cli(["--config", str(empty), "validate"], capsys)
+    assert rc == 2 and "is empty" in out.err
+    broken = tmp_path / "broken.yaml"
+    broken.write_text("tiers: [unclosed")
+    rc, out = _run_cli(["--config", str(broken), "validate"], capsys)
+    assert rc == 2 and "not valid YAML" in out.err
+    invalid = tmp_path / "invalid.yaml"
+    d = _default_dict()
+    d["offline"]["efficiency"] = 5
+    invalid.write_text(yaml.safe_dump(d))
+    rc, out = _run_cli(["--config", str(invalid), "validate"], capsys)
+    assert rc == 2 and "invalid economy config" in out.err and "efficiency" in out.err
+    bad_ov = tmp_path / "ov.yaml"
+    bad_ov.write_text("tiers.moon.unlock_cost: 5\n")
+    rc, out = _run_cli(["--overrides", str(bad_ov), "validate"], capsys)
+    assert rc == 2 and "bad override" in out.err
+
+
+def test_cli_argument_checks(capsys):
+    rc, out = _run_cli(["simulate", "best_roi", "--days", "0.05", "--disable", "ghost"], capsys)
+    assert rc == 2 and "unknown NPC event" in out.err
+    rc, out = _run_cli(["simulate", "nobody"], capsys)
+    assert rc == 2 and "unknown strategy" in out.err
+    rc, out = _run_cli(["tune", "--write-config"], capsys)
+    assert rc == 2 and "--apply" in out.err
+    with pytest.raises(SystemExit):
+        _run_cli(["simulate", "--days", "-1"], capsys)
+
+
+def test_cli_write_config_refuses_overrides(tmp_path, capsys):
+    ov = tmp_path / "ov.yaml"
+    ov.write_text("tiers.cafe.unlock_cost: 40000\n")
+    rc, out = _run_cli(["--overrides", str(ov), "tune", "--apply", str(tmp_path / "o.yaml"), "--write-config"],
+                       capsys)
+    assert rc == 2 and "cannot be combined" in out.err

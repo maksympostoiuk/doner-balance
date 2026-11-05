@@ -55,7 +55,11 @@ def scale_lever(data: dict[str, Any], lever: str | list[str], factor: float) -> 
     new = copy.deepcopy(data)
     for p in lever_paths(new, lever):
         v = get_path(new, p)
-        if isinstance(v, (int, float)) and v:
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or not v:
+            continue
+        if isinstance(v, int):  # e.g. max_level: stay an integer, at least 1
+            set_path(new, p, max(1, round(v * factor)))
+        else:
             set_path(new, p, float(v) * factor)
     return new
 
@@ -64,7 +68,7 @@ def lever_value(data: dict[str, Any], lever: str | list[str]) -> float:
     paths = lever_paths(data, lever)
     for p in paths:
         v = get_path(data, p)
-        if isinstance(v, (int, float)) and v:
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and v:
             return float(v)
     return float("nan")
 
@@ -231,7 +235,7 @@ def auto_tune(cfg: EconomyConfig, max_iter: int = 8) -> TuneResult:
                 steps.append(TuneStep(t.milestone, str(t.lever), 1.0, None, None, goal))
                 continue
 
-        def ok(y: float | None) -> bool:
+        def ok(y: float | None, goal: float = goal, t: Target = t) -> bool:
             if y is None:
                 return False
             r = y / goal
@@ -254,14 +258,15 @@ def auto_tune(cfg: EconomyConfig, max_iter: int = 8) -> TuneResult:
             if ok(y_new):
                 x_prev, y_prev = x, y_new
                 break
-            dy = math.log(y_new) - math.log(y_prev)
+            tiny = 1e-9  # a milestone reached at t = 0 must not crash the log-log search
+            dy = math.log(max(y_new, tiny)) - math.log(max(y_prev, tiny))
             dx = x - x_prev
             slope = dy / dx if abs(dx) > 1e-9 else 0.0
             x_prev, y_prev = x, y_new
             if slope < 0.02:
                 x = x + (math.log(0.5) if y_new > goal else math.log(2.0))
             else:
-                x = x + (math.log(goal) - math.log(y_new)) / slope
+                x = x + (math.log(goal) - math.log(max(y_new, tiny))) / slope
                 x = max(min(x, x_prev + math.log(10)), x_prev - math.log(10))
         data = cur
         total *= math.exp(x_prev)
@@ -285,15 +290,17 @@ def apply_overrides(data: dict[str, Any], overrides: dict[str, Any]) -> dict[str
 
 
 def format_yaml_number(v: float) -> str:
-    """YAML-safe number text (PyYAML needs a dot in scientific notation)."""
+    """YAML-safe number text (PyYAML only reads scientific notation with a dot and a sign: 1.5e+7)."""
+    if not math.isfinite(v):
+        raise ValueError(f"cannot write non-finite number {v} into the config")
     if float(v).is_integer() and abs(v) < 1e6:
         return str(int(v))
-    if abs(v) >= 1e6:
+    if v != 0 and (abs(v) >= 1e6 or abs(v) < 1e-4):
         exp = int(math.floor(math.log10(abs(v))))
         mant = f"{v / 10**exp:.3g}"
         if "." not in mant:
             mant += ".0"
-        return f"{mant}e+{exp}"
+        return f"{mant}e{exp:+d}"
     return repr(float(v))
 
 

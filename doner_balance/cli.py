@@ -14,30 +14,70 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import Any
 
 import yaml
+from pydantic import ValidationError
 
 from .config import EconomyConfig, config_from_dict
 from .recommend import fmt_h, fmt_num
 
 
-def load(path: str, overrides: str | None) -> EconomyConfig:
-    with open(path, encoding="utf-8") as fh:
-        data = yaml.safe_load(fh)
-    if overrides:
-        from .tuning import apply_overrides
+class CliError(Exception):
+    """A user-facing error: printed without a traceback, exit code 2."""
 
-        with open(overrides, encoding="utf-8") as fh:
-            data = apply_overrides(data, yaml.safe_load(fh) or {})
+
+def _read_yaml_mapping(path: str, what: str) -> dict[str, Any]:
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+    except FileNotFoundError as e:
+        raise CliError(f"{what} file not found: {path}") from e
+    except yaml.YAMLError as e:
+        raise CliError(f"{what} file {path} is not valid YAML:\n{e}") from e
+    if data is None:
+        raise CliError(f"{what} file {path} is empty")
+    if not isinstance(data, dict):
+        raise CliError(f"{what} file {path} must contain a mapping at the top level")
+    return data
+
+
+def load(path: str, overrides: str | None, extra: dict[str, Any] | None = None) -> EconomyConfig:
+    """Load the config, apply an overrides file and ``extra`` dotted-path values, then validate."""
+    from .tuning import apply_overrides
+
+    data = _read_yaml_mapping(path, "config")
+    layers = []
+    if overrides:
+        layers.append((overrides, _read_yaml_mapping(overrides, "overrides")))
+    if extra:
+        layers.append(("command line", extra))
+    for source, values in layers:
+        try:
+            data = apply_overrides(data, values)
+        except (KeyError, IndexError, TypeError) as e:
+            raise CliError(f"bad override in {source}: {e}") from e
     return config_from_dict(data)
+
+
+def _positive_float(text: str) -> float:
+    v = float(text)
+    if not v > 0:
+        raise argparse.ArgumentTypeError(f"must be > 0, got {text}")
+    return v
+
+
+def _non_negative_int(text: str) -> int:
+    v = int(text)
+    if v < 0:
+        raise argparse.ArgumentTypeError(f"must be >= 0, got {text}")
+    return v
 
 
 def cmd_report(a: argparse.Namespace) -> int:
     from .report import build
 
-    cfg = load(a.config, a.overrides)
-    if a.days:
-        cfg.simulation.days = a.days
+    cfg = load(a.config, a.overrides, {"simulation.days": a.days} if a.days else None)
     label = a.config + (f" + {a.overrides}" if a.overrides else "")
     build(cfg, Path(a.out), None if a.no_export else Path(a.export), jobs=a.jobs, events=not a.no_events,
           with_suggestions=not a.no_suggest, config_label=label)
@@ -47,13 +87,16 @@ def cmd_report(a: argparse.Namespace) -> int:
 def cmd_simulate(a: argparse.Namespace) -> int:
     from .simulator import simulate
 
-    cfg = load(a.config, a.overrides)
+    cfg = load(a.config, a.overrides, {"simulation.days": a.days} if a.days else None)
     names = a.strategy or list(cfg.strategies)
+    unknown = [n for n in names if n not in cfg.strategies]
+    if unknown:
+        raise CliError(f"unknown strategy {unknown}, choose from {list(cfg.strategies)}")
+    bad_events = sorted(set(a.disable or ()) - {e.id for e in cfg.events})
+    if bad_events:
+        raise CliError(f"unknown NPC event {bad_events}, choose from {[e.id for e in cfg.events]}")
     for n in names:
-        if n not in cfg.strategies:
-            print(f"unknown strategy '{n}', choose from {list(cfg.strategies)}", file=sys.stderr)
-            return 2
-        r = simulate(cfg, n, seed=a.seed, days=a.days, disabled_events=a.disable or ())
+        r = simulate(cfg, n, seed=a.seed, disabled_events=a.disable or ())
         print(f"\n== {n} (seed {r.seed}, {len(r.purchases)} purchases, {len(r.events)} NPC events)")
         for m, (cal, act) in r.milestones.items():
             print(f"  {m:16s} {fmt_h(cal):>9s} calendar  {fmt_h(act):>9s} play")
@@ -72,6 +115,11 @@ def cmd_tune(a: argparse.Namespace) -> int:
     from .simulator import simulate
     from .tuning import auto_tune, check_targets, suggest
 
+    if a.write_config and not a.apply:
+        raise CliError("--write-config only works together with --apply")
+    if a.write_config and a.overrides:
+        raise CliError("--write-config cannot be combined with --overrides: the tuned values would be written "
+                       "into a config that does not contain your overrides. Merge them into the YAML first.")
     cfg = load(a.config, a.overrides)
     ref = cfg.pacing.reference_strategy
     if not a.apply:
@@ -147,14 +195,14 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--no-export", action="store_true")
     r.add_argument("--no-events", action="store_true", help="skip the NPC ablation study (faster)")
     r.add_argument("--no-suggest", action="store_true", help="skip tuning sensitivity runs (faster)")
-    r.add_argument("--days", type=float, default=None, help="override simulation.days")
-    r.add_argument("--jobs", type=int, default=0, help="worker processes for the ablation (0 = auto)")
+    r.add_argument("--days", type=_positive_float, default=None, help="override simulation.days")
+    r.add_argument("--jobs", type=_non_negative_int, default=0, help="worker processes for the ablation (0 = auto)")
     r.set_defaults(func=cmd_report)
 
     s = sub.add_parser("simulate", help="run strategies and print milestones")
     s.add_argument("strategy", nargs="*", help="strategy names (default: all)")
     s.add_argument("--seed", type=int, default=None)
-    s.add_argument("--days", type=float, default=None)
+    s.add_argument("--days", type=_positive_float, default=None)
     s.add_argument("--disable", nargs="*", help="NPC event ids to switch off")
     s.add_argument("--csv", default=None, help="directory to write CSVs to")
     s.set_defaults(func=cmd_simulate)
@@ -174,7 +222,14 @@ def main(argv: list[str] | None = None) -> int:
     v.set_defaults(func=cmd_validate)
 
     a = p.parse_args(argv)
-    return a.func(a)
+    try:
+        return int(a.func(a))
+    except CliError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    except ValidationError as e:
+        print(f"error: invalid economy config ({e.error_count()} problem(s)):\n{e}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

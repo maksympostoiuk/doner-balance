@@ -129,3 +129,19 @@ in `pacing.targets`; change it and re-run `tune --apply`.
   - reputation gained per run was parsed out of a display string (broke with other currency names);
   - the 60 s re-planning interval was hardcoded → `simulation.replan_every_seconds`;
   - cost formulas return `inf` instead of raising `OverflowError` for absurd levels.
+- **R2 — validation, security, CLI** (fixed + tested):
+  - ids and strategy/profile names must match `[A-Za-z0-9_-]+` — strategy names become CSV file
+    names, so `../../x` could previously write outside `reports/`; ids with dots broke dotted paths;
+  - new checks: unique event ids and response ids, at least one staff per tier, `free_staff_levels`
+    ≥ 1 and ≤ `max_level`, sessions must not overlap (session length ≤ spacing), timed effects need
+    an `income_mult`, `tap_share_low_pct < tap_share_high_pct`, unique seeds, `days ≤ 3650`, and every
+    pacing lever must resolve to existing numeric fields (was only discovered mid-tuning);
+  - `set_path` no longer silently creates keys under list items; `expand_path` supports `*` on maps;
+  - CLI: missing/empty/broken YAML, invalid configs and bad override paths print one clear error
+    (exit 2) instead of a traceback; `--days`/`--jobs` are range-checked and go through validation;
+    unknown `--disable` ids are rejected; `--write-config` requires `--apply` and refuses
+    `--overrides` (it would have written values tuned for a different config into the YAML);
+  - tuning: levers never scale booleans and keep integers integral; `format_yaml_number` wrote
+    `1e-07`, which PyYAML reads back as a *string*; `auto_tune` no longer crashes on a milestone
+    reached at t = 0.
+- Tooling: `ruff` (lint) and `mypy` (typecheck) configured in `pyproject.toml`, dev extras updated.

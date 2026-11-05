@@ -7,10 +7,16 @@ its shape and validates it. See the YAML file for comments on each value.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
+
+# Ids are used in dotted config paths, CSV file names and Godot translation keys:
+# letters, digits, "_" and "-" only (no dots, slashes or spaces).
+ID_PATTERN = r"^[A-Za-z0-9_-]+$"
+Ident = Annotated[str, StringConstraints(pattern=ID_PATTERN, min_length=1, max_length=64)]
+Name = Annotated[str, StringConstraints(min_length=1, max_length=200)]
 
 
 class _Model(BaseModel):
@@ -28,8 +34,8 @@ class Milestone(_Model):
 
 
 class TapUpgrade(_Model):
-    id: str
-    name: str
+    id: Ident
+    name: Name
     kind: Literal["flat", "pct", "income_share"]
     # flat: +value coins per tap per level
     # pct: +value (fraction) tap multiplier per level (additive between levels)
@@ -48,8 +54,8 @@ class TapConfig(_Model):
 class Staff(_Model):
     """Hired staff: each level adds ``income`` coins/sec of automated production."""
 
-    id: str
-    name: str
+    id: Ident
+    name: Name
     base_cost: float = Field(gt=0)
     cost_growth: float = Field(gt=1.0)
     income: float = Field(gt=0)
@@ -62,8 +68,8 @@ class TierUpgrade(_Model):
     Both multiply the tier's automated income: (1 + sum income) * (1 + sum speed).
     """
 
-    id: str
-    name: str
+    id: Ident
+    name: Name
     kind: Literal["income", "speed"]
     value: float = Field(gt=0)
     base_cost: float = Field(gt=0)
@@ -74,8 +80,8 @@ class TierUpgrade(_Model):
 class Manager(_Model):
     """One-time hire. Lets a tier keep producing while the player is offline."""
 
-    id: str
-    name: str
+    id: Ident
+    name: Name
     cost: float = Field(gt=0)
     income_mult: float = Field(default=1.0, gt=0)
     enables_offline: bool = True
@@ -83,22 +89,25 @@ class Manager(_Model):
 
 
 class Tier(_Model):
-    id: str
-    name: str
+    id: Ident
+    name: Name
     unlock_cost: float = Field(ge=0)
     tap_mult: float = Field(default=1.0, gt=0)
     global_income_mult: float = Field(default=1.0, gt=0)
-    free_staff_levels: dict[str, int] = Field(default_factory=dict)
-    staff: list[Staff]
+    free_staff_levels: dict[str, Annotated[int, Field(ge=1)]] = Field(default_factory=dict)
+    staff: list[Staff] = Field(min_length=1)
     upgrades: list[TierUpgrade] = Field(default_factory=list)
     managers: list[Manager] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def _free_staff_exist(self) -> "Tier":
-        ids = {s.id for s in self.staff}
-        for sid in self.free_staff_levels:
-            if sid not in ids:
+    def _free_staff_exist(self) -> Tier:
+        staff = {s.id: s for s in self.staff}
+        for sid, lv in self.free_staff_levels.items():
+            if sid not in staff:
                 raise ValueError(f"tier {self.id}: free_staff_levels references unknown staff '{sid}'")
+            cap = staff[sid].max_level
+            if cap is not None and lv > cap:
+                raise ValueError(f"tier {self.id}: free_staff_levels[{sid}] = {lv} exceeds max_level {cap}")
         return self
 
 
@@ -125,22 +134,24 @@ class Effect(_Model):
     cash_gain: Amount | None = None
 
     @model_validator(mode="after")
-    def _has_effect(self) -> "Effect":
+    def _has_effect(self) -> Effect:
         if self.income_mult is None and self.cash_loss is None and self.cash_gain is None:
             raise ValueError("effect must define income_mult, cash_loss or cash_gain")
+        if self.duration_hours is not None and self.income_mult is None:
+            raise ValueError("duration_hours only makes sense together with income_mult")
         return self
 
 
 class Response(_Model):
-    id: str
-    name: str
+    id: Ident
+    name: Name
     cost: Amount = Field(default_factory=Amount)
     effects: list[Effect] = Field(default_factory=list)
 
 
 class NpcEvent(_Model):
-    id: str
-    name: str
+    id: Ident
+    name: Name
     npc: Literal["supplier", "inspector", "mafia", "rival"]
     enabled: bool = True
     min_tier: str
@@ -151,8 +162,11 @@ class NpcEvent(_Model):
     responses: list[Response] = Field(min_length=1)
 
     @model_validator(mode="after")
-    def _default_exists(self) -> "NpcEvent":
-        if self.default_response not in {r.id for r in self.responses}:
+    def _default_exists(self) -> NpcEvent:
+        ids = [r.id for r in self.responses]
+        if len(set(ids)) != len(ids):
+            raise ValueError(f"event {self.id}: response ids must be unique, got {ids}")
+        if self.default_response not in ids:
             raise ValueError(f"event {self.id}: default_response '{self.default_response}' is not a response id")
         return self
 
@@ -197,9 +211,15 @@ class SessionProfile(_Model):
     event_response: Literal["smart", "default"] = "smart"
 
     @model_validator(mode="after")
-    def _window(self) -> "SessionProfile":
+    def _window(self) -> SessionProfile:
         if self.day_end_hour <= self.day_start_hour:
             raise ValueError("day_end_hour must be after day_start_hour")
+        spacing_min = (self.day_end_hour - self.day_start_hour) * 60.0 / self.sessions_per_day
+        longest = max(self.session_minutes, self.first_session_minutes or 0.0)
+        if longest > spacing_min:
+            raise ValueError(
+                f"sessions overlap: {self.sessions_per_day} sessions in {self.day_end_hour - self.day_start_hour:g} h "
+                f"start every {spacing_min:g} min, but a session lasts {longest:g} min")
         return self
 
 
@@ -217,7 +237,7 @@ class StrategyParams(_Model):
 
 
 class SimulationConfig(_Model):
-    days: float = Field(gt=0)
+    days: float = Field(gt=0, le=3650)
     seed: int
     extra_seeds: list[int] = Field(default_factory=list)
     dt_active_seconds: float = Field(gt=0)
@@ -225,6 +245,13 @@ class SimulationConfig(_Model):
     record_every_seconds: float = Field(gt=0)
     max_purchases_per_tick: int = Field(default=500, gt=0)
     replan_every_seconds: float = Field(default=60, gt=0)
+
+    @model_validator(mode="after")
+    def _seeds_unique(self) -> SimulationConfig:
+        seeds = [self.seed, *self.extra_seeds]
+        if len(set(seeds)) != len(seeds):
+            raise ValueError(f"seed and extra_seeds must all be different, got {seeds}")
+        return self
 
 
 class Target(_Model):
@@ -248,10 +275,16 @@ class AnalysisConfig(_Model):
     dead_zone_threshold_active_minutes: float = Field(gt=0)
     meaningful_gain_pct: float = Field(gt=0)
     tap_share_low_pct: float = Field(ge=0)
-    tap_share_high_pct: float = Field(le=100)
+    tap_share_high_pct: float = Field(gt=0, le=100)
     casual_slowdown_warn: float = Field(gt=1)
     event_impact_warn_pct: float = Field(gt=0)
     event_checkpoint_hours: float = Field(default=168, gt=0)
+
+    @model_validator(mode="after")
+    def _bounds(self) -> AnalysisConfig:
+        if self.tap_share_low_pct >= self.tap_share_high_pct:
+            raise ValueError("tap_share_low_pct must be below tap_share_high_pct")
+        return self
 
 
 class Currency(_Model):
@@ -270,8 +303,8 @@ class EconomyConfig(_Model):
     offline: OfflineConfig
     prestige: PrestigeConfig
     events: list[NpcEvent] = Field(default_factory=list)
-    profiles: dict[str, SessionProfile]
-    strategies: dict[str, StrategyConfig]
+    profiles: dict[Ident, SessionProfile] = Field(min_length=1)
+    strategies: dict[Ident, StrategyConfig] = Field(min_length=1)
     strategy_params: StrategyParams
     simulation: SimulationConfig
     pacing: PacingConfig
@@ -283,7 +316,7 @@ class EconomyConfig(_Model):
         return sorted(v, key=lambda m: m.level)
 
     @model_validator(mode="after")
-    def _cross_refs(self) -> "EconomyConfig":
+    def _cross_refs(self) -> EconomyConfig:
         tier_ids = [t.id for t in self.tiers]
         if len(set(tier_ids)) != len(tier_ids):
             raise ValueError("tier ids must be unique")
@@ -301,6 +334,9 @@ class EconomyConfig(_Model):
             raise ValueError(f"item ids must be globally unique, duplicates: {sorted(dupes)}")
         if self.prestige.required_tier not in tier_ids:
             raise ValueError(f"prestige.required_tier '{self.prestige.required_tier}' is not a tier")
+        event_ids = [e.id for e in self.events]
+        if len(set(event_ids)) != len(event_ids):
+            raise ValueError(f"event ids must be unique, got {event_ids}")
         for e in self.events:
             if e.min_tier not in tier_ids:
                 raise ValueError(f"event {e.id}: min_tier '{e.min_tier}' is not a tier")
@@ -313,7 +349,25 @@ class EconomyConfig(_Model):
         for t in self.pacing.targets:
             if t.milestone not in valid_ms:
                 raise ValueError(f"target milestone '{t.milestone}' must be one of {sorted(valid_ms)}")
+        self._check_levers(tier_ids)
         return self
+
+    def _check_levers(self, tier_ids: list[str]) -> None:
+        """Every pacing lever must point at existing numeric values (fail now, not during tuning)."""
+        data = self.model_dump()
+        for t in self.pacing.targets:
+            for lever in [t.lever] if isinstance(t.lever, str) else t.lever:
+                if lever.startswith("tier:"):
+                    if lever.split(":", 1)[1] not in tier_ids:
+                        raise ValueError(f"target {t.milestone}: lever '{lever}' names an unknown tier")
+                    continue
+                paths = expand_path(data, lever)
+                if not paths:
+                    raise ValueError(f"target {t.milestone}: lever path '{lever}' matches nothing in the config")
+                for p in paths:
+                    v = get_path(data, p)
+                    if isinstance(v, bool) or not isinstance(v, (int, float)):
+                        raise ValueError(f"target {t.milestone}: lever path '{p}' is not a number")
 
     # convenience -----------------------------------------------------------
     def tier_index(self, tier_id: str) -> int:
@@ -355,8 +409,12 @@ def expand_path(data: dict[str, Any], path: str) -> list[str]:
         nxt: list[tuple[str, Any]] = []
         for prefix, node in cur_nodes:
             if part == "*":
-                items = node if isinstance(node, list) else list(node.values())
-                keys = [it["id"] if isinstance(it, dict) and "id" in it else str(i) for i, it in enumerate(items)]
+                if isinstance(node, dict):
+                    keys = [str(k) for k in node]
+                elif isinstance(node, list):
+                    keys = [it["id"] if isinstance(it, dict) and "id" in it else str(i) for i, it in enumerate(node)]
+                else:
+                    continue
                 for k in keys:
                     nxt.append((f"{prefix}.{k}" if prefix else k, _resolve_container(node, k)))
             else:
@@ -379,8 +437,21 @@ def get_path(data: dict[str, Any], path: str) -> Any:
 
 
 def set_path(data: dict[str, Any], path: str, value: Any) -> None:
+    """Write a dotted path. Missing intermediate keys raise ``KeyError`` (no silent typos)."""
     parts = path.split(".")
     cur: Any = data
     for part in parts[:-1]:
         cur = _resolve_container(cur, part)
-    cur[parts[-1]] = value
+    last = parts[-1]
+    if isinstance(cur, list):
+        for i, item in enumerate(cur):
+            if isinstance(item, dict) and item.get("id") == last:
+                cur[i] = value
+                return
+        if last.isdigit() and int(last) < len(cur):
+            cur[int(last)] = value
+            return
+        raise KeyError(f"no list item with id '{last}'")
+    if not isinstance(cur, dict):
+        raise KeyError(f"'{path}' does not point into a mapping")
+    cur[last] = value
