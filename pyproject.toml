@@ -1,0 +1,28 @@
+[project]
+name = "doner-balance"
+version = "0.1.0"
+description = "Economy balance simulator for the idle/tapper game 'Doner Lamar' (Shawarma Empire)"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "matplotlib>=3.9",
+    "pydantic>=2.7",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+doner-balance = "doner_balance.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["doner_balance"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
