@@ -61,5 +61,7 @@ godot/                     GDScript example loader
 ```bash
 uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements.txt
 .venv/bin/pytest -q
-.venv/bin/python -m doner_balance report
+.venv/bin/python -m doner_balance report                      # everything -> reports/, export/
+.venv/bin/python -m doner_balance tune                        # pacing vs targets + suggestions
+.venv/bin/python -m doner_balance tune --apply --write-config # auto-tune into the YAML (keeps comments)
 ```

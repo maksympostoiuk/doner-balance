@@ -337,6 +337,11 @@ def render(d: ReportData, config_label: str, export_path: Path | None) -> str:
         w(f"- **[{r.severity:.0f}] {r.title}** ({r.area})  \n  {r.evidence}  \n  → {r.action}")
     w("")
 
+    # ---------------------------------------------------------------- summary
+    w("## Summary\n")
+    w(summary_text(d))
+    w("")
+
     # ---------------------------------------------------------------- files
     w("## Files\n")
     w("| file | content |\n|---|---|")
@@ -359,3 +364,52 @@ def render(d: ReportData, config_label: str, export_path: Path | None) -> str:
         w(f"| `{export_path}` | Godot export of this config (see `docs/GODOT_EXPORT.md`) |")
     w(f"\n_Generated in {d.seconds:.0f} s._\n")
     return "\n".join(L)
+
+
+def summary_text(d: ReportData) -> str:
+    """Closing prose summary: how the balance looks and what to tune first (generated)."""
+    cfg = d.cfg
+    ref_name = cfg.pacing.reference_strategy
+    ref = d.results[ref_name]
+    out: list[str] = []
+    ok = [c for c in d.checks if c.status == "ok"]
+    off = [c for c in d.checks if c.status != "ok"]
+    ms = ", ".join(f"{c.milestone} at {fmt_h(c.actual_h)}" for c in d.checks if c.actual_h is not None)
+    out.append(f"**Pacing.** {len(ok)} of {len(d.checks)} pacing targets are met for `{ref_name}` ({ms})."
+               + (" Off target: " + ", ".join(f"`{c.milestone}` ({c.status})" for c in off) + "." if off else ""))
+    st = d.stages[d.stages["strategy"] == ref_name]
+    if len(st):
+        longest = st.loc[st["calendar_h"].idxmax()]
+        out.append(f"**Shape.** The first run is kiosk → cafe → restaurant → franchise; the longest stage is "
+                   f"**{longest['stage']}** ({fmt_h(longest['calendar_h'])}, {longest['play_min']:.0f} min of play).")
+    src = d.sources[(d.sources["strategy"] == ref_name) & (d.sources["day"] >= 2)]
+    tot = src[["tap", "automation", "offline"]].sum()
+    if tot.sum() > 0:
+        out.append(f"**Income.** From day 2 on, {100 * tot['offline'] / tot.sum():.0f}% of coins come from offline "
+                   f"earnings, {100 * tot['automation'] / tot.sum():.0f}% from automation while playing and "
+                   f"{100 * tot['tap'] / tot.sum():.0f}% from taps (taps are "
+                   f"{A.tap_share_of_active(ref, 24):.0f}% of what is earned during a session).")
+    zs = d.zone_summary.set_index("strategy").loc[ref_name]
+    out.append(f"**Dead zones.** {zs['share_of_play_pct']:.0f}% of play time passes without +"
+               f"{cfg.analysis.meaningful_gain_pct:g}% progress; the longest wait is {zs['longest_min']:.0f} min of play.")
+    others = []
+    for n, r in d.results.items():
+        if n == ref_name:
+            continue
+        f = r.milestone_hours(cfg.tiers[-1].id)
+        others.append(f"`{n}` {fmt_h(f) if f is not None else 'never'}")
+    out.append(f"**Other players.** Time to {cfg.tiers[-1].id}: `{ref_name}` "
+               f"{fmt_h(ref.milestone_hours(cfg.tiers[-1].id))}, " + ", ".join(others) + ".")
+    if d.impact is not None:
+        imp = d.impact[(d.impact["strategy"] == ref_name) & (d.impact["event"] != "all events")]
+        if len(imp):
+            big = imp.loc[imp["delay_pct"].abs().idxmax()]
+            allrow = d.impact[(d.impact["strategy"] == ref_name) & (d.impact["event"] == "all events")]
+            out.append(f"**NPCs.** All events together shift `{ref_name}` by {allrow['shift_h'].iloc[0]:+.1f} h by hour "
+                       f"{cfg.analysis.event_checkpoint_hours:g}; the strongest single NPC is `{big['event']}` "
+                       f"({big['shift_h']:+.1f} h).")
+    actionable = [r for r in d.recs if r.action != "No change needed."][:3]
+    if actionable:
+        out.append("**Tune first:** " + " ".join(f"({i}) {r.title}." for i, r in enumerate(actionable, 1))
+                   + " Details and concrete values are at the top of this report.")
+    return "\n\n".join(out)

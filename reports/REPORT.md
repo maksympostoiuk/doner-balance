@@ -196,6 +196,22 @@ Sorted by severity (0–100). Rules live in `doner_balance/recommend.py`; thresh
   `casual` reaches `franchise` after 11.0 d vs 6.2 d (x1.8, warning above x3).  
   → No change needed.
 
+## Summary
+
+**Pacing.** 5 of 5 pacing targets are met for `best_roi` (first_upgrade at 4 s, cafe at 8.5 min, restaurant at 24.0 h, franchise at 6.2 d, first_prestige at 12.4 d).
+
+**Shape.** The first run is kiosk → cafe → restaurant → franchise; the longest stage is **franchise** (6.2 d, 190 min of play).
+
+**Income.** From day 2 on, 89% of coins come from offline earnings, 8% from automation while playing and 3% from taps (taps are 27% of what is earned during a session).
+
+**Dead zones.** 77% of play time passes without +5% progress; the longest wait is 40 min of play.
+
+**Other players.** Time to franchise: `best_roi` 6.2 d, `cheapest` never, `saver` 6.2 d, `casual` 11.0 d.
+
+**NPCs.** All events together shift `best_roi` by +3.0 h by hour 168; the strongest single NPC is `supplier_deal` (-8.7 h).
+
+**Tune first:** (1) Too much play time without meaningful progress. (2) Long wait for `franchise`. (3) Long wait for `marketing_dept`. Details and concrete values are at the top of this report.
+
 ## Files
 
 | file | content |
@@ -213,4 +229,4 @@ Sorted by severity (0–100). Rules live in `doner_balance/recommend.py`; thresh
 | `recommendations.csv` | the findings above as a table |
 | `export/economy.json` | Godot export of this config (see `docs/GODOT_EXPORT.md`) |
 
-_Generated in 22 s._
+_Generated in 21 s._

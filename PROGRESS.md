@@ -14,7 +14,7 @@ Plan and status for the Doner Lamar economy simulator. Updated after every miles
 | M5 | Target pacing in config + tuning helper (distance to targets, suggested parameter changes) | done |
 | M6 | Godot JSON export + format docs + GDScript example | done |
 | M7 | REPORT.md generator with concrete recommendations; one CLI command for everything | done |
-| M8 | Tests (formulas, income, events, offline, determinism), README, final balance pass + summary | todo |
+| M8 | Tests (formulas, income, events, offline, determinism), README, final balance pass + summary | done |
 
 ## Log
 
@@ -63,3 +63,53 @@ Plan and status for the Doner Lamar economy simulator. Updated after every miles
   earnings (manager requirement, efficiency, cap, cap from managers, credit at next session),
   determinism (same seed identical, different seed differs, independent event streams), dead-zone
   logic, tuning levers, export test vectors and a CLI smoke test. Runs in ~4 s.
+- **Balance pass** — added restaurant content (`night_shift` staff, `delivery_app` upgrade) because
+  that stage lasts ~5 days; COO no longer costs more than the franchise unlock; then
+  `tune --apply --write-config` re-hit all five pacing targets (new: comment-preserving YAML
+  patcher). NPC impact now measured as *progress shift* (hours of progress lost by day 7, sampled
+  at session ends) after two noisier metrics proved misleading.
+- **M8b** — README (setup, one-command run, CLI, model, how to change the config, how to read the
+  report), generated closing summary in REPORT.md. 81 tests pass.
+
+## Summary — where the balance stands (economy v0.1.0, seed 42)
+
+**Pacing: all five targets met** for the reference player (`best_roi`, 3 × 10 min/day):
+first purchase 4 s, cafe 8.5 min (end of session 1), restaurant 24 h (last session of day 1),
+franchise 6.2 days, first prestige 12.4 days. Casual players (2 × 5 min/day) reach the franchise
+on day 11 (×1.8 slower, inside the ×3 warning line). A naive cheapest-first buyer never reaches
+the franchise in 21 days.
+
+**What the economy looks like.** Run 1 is kiosk 9 min → cafe 1 day → restaurant 5.2 days →
+franchise 6.2 days → prestige (54 reputation, ×2.08 income); run 2 reaches the franchise ×1.6
+faster. From day 2 on, ~89% of coins come from offline earnings, ~8% from automation while playing
+and ~3% from taps (taps are still ~27% of what is earned *during* a session, so tapping feels
+worthwhile while playing). NPCs are mild: all events together cost the smart player ~3 h of
+progress by day 7. Supplier deals are the strongest NPC and act as a buff (~9 h ahead); inspector
+and rival barely register.
+
+**What to tune first** (also at the top of `reports/REPORT.md`):
+
+1. **Idle sessions / offline dominance.** 42 of 47 dead zones are single sessions in which the
+   offline earnings are spent in the first seconds and the remaining ~9 minutes add little. That is
+   the core idle-game trade-off. If sessions should matter, lower `offline.efficiency` (0.5 → ~0.35)
+   and/or raise `tap.upgrades.showman.value`, then re-run `tune --apply` to restore pacing. It is
+   also a game-design hook: in-session goals, NPC events that happen *while* playing, timed boosts.
+2. **The wall before the franchise** (~40 min of play over ~4 sessions on days 5-6). Add one more
+   restaurant item around 12T cost, or more `interior` levels.
+3. **Early franchise stage waits** for `regional_director` / `marketing_dept` (20-30 min of play).
+   Slightly cheaper growth, or an intermediate franchise upgrade.
+4. Decide what the NPCs should *feel* like: they are currently mostly flavour. To make the
+   inspector/mafia/rival memorable, raise their rates or stakes; to keep the supplier from being a
+   free buff, lower `accept` to ×1.1 or raise its cost.
+
+**Caveats.** Strategies are scripted bots: they buy optimally (or naively) and never forget to log
+in. Prestige timing follows a fixed "double your income" rule. The target pacing is an assumption
+in `pacing.targets`; change it and re-run `tune --apply`.
+
+## Next ideas (not done)
+
+- Monte Carlo over many seeds for the main milestone table (currently main runs use one seed;
+  the NPC ablation uses 5).
+- Session-length variance and missed days in the player model.
+- Bulk-buy (x10/x100) behaviour and "buy max" UI in strategies.
+- More prestige layers / reputation shop.
