@@ -199,7 +199,7 @@ def payback_chart(results: dict[str, SimResult], out: Path) -> Path:
     return _save(fig, out)
 
 
-def event_impact_chart(impact: pd.DataFrame, out: Path, milestone: str = "franchise") -> Path:
+def event_impact_chart(impact: pd.DataFrame, out: Path, checkpoint_h: float = 168) -> Path:
     _style()
     names = list(dict.fromkeys(impact["strategy"]))
     colors = strategy_colors(names)
@@ -218,7 +218,8 @@ def event_impact_chart(impact: pd.DataFrame, out: Path, milestone: str = "franch
     ax.set_yticks(range(len(events)))
     ax.set_yticklabels(events)
     ax.invert_yaxis()
-    ax.set_xlabel(f"change in time to {milestone} caused by the event (+ = slower), median over seeds")
+    ax.set_xlabel(f"hours of progress lost by hour {checkpoint_h:g}, as % of {checkpoint_h:g} h "
+                  "(+ = the event slows you down), median over seeds")
     ax.set_title("Impact of each NPC event type on progress", pad=28)
     ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=len(names))
     ax.grid(axis="y", visible=False)

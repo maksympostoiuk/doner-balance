@@ -69,3 +69,24 @@ def test_cli_validate_and_simulate(capsys):
     assert "OK" in capsys.readouterr().out
     assert main(["simulate", "casual", "--days", "0.5"]) == 0
     assert "first_upgrade" in capsys.readouterr().out
+
+
+def test_patch_yaml_text_keeps_comments(default_cfg):
+    import yaml
+
+    from doner_balance.config import config_from_dict, get_path
+    from doner_balance.tuning import format_yaml_number, patch_yaml_text
+    from .conftest import DEFAULT_CONFIG
+
+    text = DEFAULT_CONFIG.read_text()
+    new = patch_yaml_text(text, {"tiers.cafe.unlock_cost": 42000, "tiers.franchise.staff.franchisee.income": 3.3e9,
+                                 "prestige.base_requirement": 1.5e16})
+    data = yaml.safe_load(new)
+    config_from_dict(data)
+    assert get_path(data, "tiers.cafe.unlock_cost") == 42000
+    assert get_path(data, "tiers.franchise.staff.franchisee.income") == 3.3e9
+    assert get_path(data, "prestige.base_requirement") == 1.5e16
+    assert new.count("#") == text.count("#")  # no comment lost
+    assert len(new.splitlines()) == len(text.splitlines())
+    for v in (12, 0.25, 4.3e7, 1e13, 2.5e6):
+        assert yaml.safe_load(format_yaml_number(v)) == v

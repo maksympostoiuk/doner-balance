@@ -179,45 +179,57 @@ tiers:
   # ---------------------------------------------------------------- RESTAURANT
   - id: restaurant
     name: Doner restaurant
-    unlock_cost: 30000000       # tuned: end of day 1
+    unlock_cost: 4.3e+7       # tuned: end of day 1
     tap_mult: 4
     global_income_mult: 1.25
     free_staff_levels: {sous_chef: 1}
     staff:
       - id: sous_chef
         name: Sous-chef
-        base_cost: 15000000
+        base_cost: 2.1e+7
         cost_growth: 1.13
-        income: 4500            # base payback 3300 s
+        income: 6400            # base payback 3300 s
       - id: head_chef
         name: Head chef
-        base_cost: 240000000
+        base_cost: 3.4e+8
         cost_growth: 1.14
-        income: 36000           # base payback 6700 s
+        income: 51000           # base payback 6700 s
       - id: catering
         name: Catering team
-        base_cost: 3600000000
+        base_cost: 5.1e+9
         cost_growth: 1.15
-        income: 300000          # base payback 12000 s
+        income: 430000          # base payback 12000 s
+      - id: night_shift
+        name: Night shift crew        # added: the restaurant stage lasts ~6 days and needs more steps
+        base_cost: 8.6e+10
+        cost_growth: 1.15
+        income: 4.3e+6          # base payback 20000 s
     upgrades:
       - id: interior
         name: Designer interior
         kind: income
         value: 0.08
-        base_cost: 300000000
+        base_cost: 4.3e+8
         cost_growth: 1.5
         max_level: 10
       - id: tandoor
         name: Charcoal tandoor
         kind: speed
         value: 0.10
-        base_cost: 1200000000
+        base_cost: 1.7e+9
         cost_growth: 1.7
         max_level: 6
+      - id: delivery_app
+        name: Delivery app partnership  # added for the long restaurant stage
+        kind: income
+        value: 0.08
+        base_cost: 2.9e+10
+        cost_growth: 1.5
+        max_level: 10
     managers:
       - id: gm_lena
         name: General manager Lena
-        cost: 45000000          # 1.5x unlock
+        cost: 6.4e+7          # 1.5x unlock
         income_mult: 1.25
         enables_offline: true
         offline_cap_hours_add: 2
@@ -225,45 +237,45 @@ tiers:
   # ---------------------------------------------------------------- FRANCHISE
   - id: franchise
     name: International franchise
-    unlock_cost: 7.0e+12        # tuned: about one week
+    unlock_cost: 5.7e+13        # tuned: about one week
     tap_mult: 8
     global_income_mult: 1.5
     free_staff_levels: {franchisee: 1}
     staff:
       - id: franchisee
         name: Franchisee
-        base_cost: 3.5e+12
+        base_cost: 2.8e+13
         cost_growth: 1.12
-        income: 1.4e+8          # base payback 25000 s
+        income: 1.1e+9          # base payback 25000 s
       - id: regional_director
         name: Regional director
-        base_cost: 5.6e+13
+        base_cost: 4.6e+14
         cost_growth: 1.13
-        income: 1.1e+9          # base payback 51000 s
+        income: 9.0e+9          # base payback 51000 s
       - id: marketing_dept
         name: Marketing department
-        base_cost: 8.4e+14
+        base_cost: 6.8e+15
         cost_growth: 1.14
-        income: 8.4e+9          # base payback 100000 s
+        income: 6.8e+10          # base payback 100000 s
     upgrades:
       - id: tv_campaign
         name: TV campaign
         kind: income
         value: 0.08
-        base_cost: 7.0e+13
+        base_cost: 5.7e+14
         cost_growth: 1.5
         max_level: 10
       - id: central_kitchen
         name: Central kitchen logistics
         kind: speed
         value: 0.10
-        base_cost: 2.8e+14
+        base_cost: 2.3e+15
         cost_growth: 1.7
         max_level: 6
     managers:
       - id: coo
         name: Chief operating officer
-        cost: 1.0e+13           # ~1.5x unlock
+        cost: 1.2e+13           # cheaper than the unlock: the franchise must earn offline quickly
         income_mult: 1.5
         enables_offline: true
         offline_cap_hours_add: 4
@@ -284,7 +296,7 @@ prestige:
   currency_name: reputation
   required_tier: franchise        # can only sell once you own a franchise
   # reputation = floor(scale * (all_time_earnings / base_requirement) ^ exponent)
-  base_requirement: 2.7e+12       # tuned: first prestige around two weeks
+  base_requirement: 7.7e+15       # tuned: first prestige around two weeks
   exponent: 0.5                   # square root: diminishing returns (standard)
   scale: 10
   bonus_per_point: 0.02           # +2% global income per reputation point

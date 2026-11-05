@@ -211,7 +211,7 @@
       "id": "restaurant",
       "name": "Doner restaurant",
       "index": 2,
-      "unlock_cost": 30000000.0,
+      "unlock_cost": 43000000.0,
       "tap_mult": 4.0,
       "global_income_mult": 1.25,
       "free_staff_levels": {
@@ -221,25 +221,33 @@
         {
           "id": "sous_chef",
           "name": "Sous-chef",
-          "base_cost": 15000000.0,
+          "base_cost": 21000000.0,
           "cost_growth": 1.13,
-          "income": 4500.0,
+          "income": 6400.0,
           "max_level": null
         },
         {
           "id": "head_chef",
           "name": "Head chef",
-          "base_cost": 240000000.0,
+          "base_cost": 340000000.0,
           "cost_growth": 1.14,
-          "income": 36000.0,
+          "income": 51000.0,
           "max_level": null
         },
         {
           "id": "catering",
           "name": "Catering team",
-          "base_cost": 3600000000.0,
+          "base_cost": 5100000000.0,
           "cost_growth": 1.15,
-          "income": 300000.0,
+          "income": 430000.0,
+          "max_level": null
+        },
+        {
+          "id": "night_shift",
+          "name": "Night shift crew",
+          "base_cost": 86000000000.0,
+          "cost_growth": 1.15,
+          "income": 4300000.0,
           "max_level": null
         }
       ],
@@ -249,7 +257,7 @@
           "name": "Designer interior",
           "kind": "income",
           "value": 0.08,
-          "base_cost": 300000000.0,
+          "base_cost": 430000000.0,
           "cost_growth": 1.5,
           "max_level": 10
         },
@@ -258,16 +266,25 @@
           "name": "Charcoal tandoor",
           "kind": "speed",
           "value": 0.1,
-          "base_cost": 1200000000.0,
+          "base_cost": 1700000000.0,
           "cost_growth": 1.7,
           "max_level": 6
+        },
+        {
+          "id": "delivery_app",
+          "name": "Delivery app partnership",
+          "kind": "income",
+          "value": 0.08,
+          "base_cost": 29000000000.0,
+          "cost_growth": 1.5,
+          "max_level": 10
         }
       ],
       "managers": [
         {
           "id": "gm_lena",
           "name": "General manager Lena",
-          "cost": 45000000.0,
+          "cost": 64000000.0,
           "income_mult": 1.25,
           "enables_offline": true,
           "offline_cap_hours_add": 2.0
@@ -278,7 +295,7 @@
       "id": "franchise",
       "name": "International franchise",
       "index": 3,
-      "unlock_cost": 7000000000000.0,
+      "unlock_cost": 57000000000000.0,
       "tap_mult": 8.0,
       "global_income_mult": 1.5,
       "free_staff_levels": {
@@ -288,25 +305,25 @@
         {
           "id": "franchisee",
           "name": "Franchisee",
-          "base_cost": 3500000000000.0,
+          "base_cost": 28000000000000.0,
           "cost_growth": 1.12,
-          "income": 140000000.0,
+          "income": 1100000000.0,
           "max_level": null
         },
         {
           "id": "regional_director",
           "name": "Regional director",
-          "base_cost": 56000000000000.0,
+          "base_cost": 460000000000000.0,
           "cost_growth": 1.13,
-          "income": 1100000000.0,
+          "income": 9000000000.0,
           "max_level": null
         },
         {
           "id": "marketing_dept",
           "name": "Marketing department",
-          "base_cost": 840000000000000.0,
+          "base_cost": 6800000000000000.0,
           "cost_growth": 1.14,
-          "income": 8400000000.0,
+          "income": 68000000000.0,
           "max_level": null
         }
       ],
@@ -316,7 +333,7 @@
           "name": "TV campaign",
           "kind": "income",
           "value": 0.08,
-          "base_cost": 70000000000000.0,
+          "base_cost": 570000000000000.0,
           "cost_growth": 1.5,
           "max_level": 10
         },
@@ -325,7 +342,7 @@
           "name": "Central kitchen logistics",
           "kind": "speed",
           "value": 0.1,
-          "base_cost": 280000000000000.0,
+          "base_cost": 2300000000000000.0,
           "cost_growth": 1.7,
           "max_level": 6
         }
@@ -334,7 +351,7 @@
         {
           "id": "coo",
           "name": "Chief operating officer",
-          "cost": 10000000000000.0,
+          "cost": 12000000000000.0,
           "income_mult": 1.5,
           "enables_offline": true,
           "offline_cap_hours_add": 4.0
@@ -351,7 +368,7 @@
     "enabled": true,
     "currency_name": "reputation",
     "required_tier": "franchise",
-    "base_requirement": 2700000000000.0,
+    "base_requirement": 7700000000000000.0,
     "exponent": 0.5,
     "scale": 10.0,
     "bonus_per_point": 0.02,
@@ -831,162 +848,192 @@
       {
         "item": "sous_chef",
         "level": 0,
-        "cost": 15000000.0
+        "cost": 21000000.0
       },
       {
         "item": "sous_chef",
         "level": 1,
-        "cost": 16950000.0
+        "cost": 23729999.999999996
       },
       {
         "item": "sous_chef",
         "level": 10,
-        "cost": 50918510.84883329
+        "cost": 71285915.18836662
       },
       {
         "item": "sous_chef",
         "level": 25,
-        "cost": 318458134.07831544
+        "cost": 445841387.70964164
       },
       {
         "item": "head_chef",
         "level": 0,
-        "cost": 240000000.0
+        "cost": 340000000.0
       },
       {
         "item": "head_chef",
         "level": 1,
-        "cost": 273600000.0
+        "cost": 387599999.99999994
       },
       {
         "item": "head_chef",
         "level": 10,
-        "cost": 889733115.3884552
+        "cost": 1260455246.8003116
       },
       {
         "item": "head_chef",
         "level": 25,
-        "cost": 6350859794.960699
+        "cost": 8997051376.194324
       },
       {
         "item": "catering",
         "level": 0,
-        "cost": 3600000000.0
+        "cost": 5100000000.0
       },
       {
         "item": "catering",
         "level": 1,
-        "cost": 4139999999.9999995
+        "cost": 5865000000.0
       },
       {
         "item": "catering",
         "level": 10,
-        "cost": 14564007848.548464
+        "cost": 20632344452.110325
       },
       {
         "item": "catering",
         "level": 25,
-        "cost": 118508229431.24261
+        "cost": 167886658360.92703
+      },
+      {
+        "item": "night_shift",
+        "level": 0,
+        "cost": 86000000000.0
+      },
+      {
+        "item": "night_shift",
+        "level": 1,
+        "cost": 98899999999.99998
+      },
+      {
+        "item": "night_shift",
+        "level": 10,
+        "cost": 347917965270.87994
+      },
+      {
+        "item": "night_shift",
+        "level": 25,
+        "cost": 2831029925301.9067
       },
       {
         "item": "interior",
         "level": 0,
-        "cost": 300000000.0
+        "cost": 430000000.0
       },
       {
         "item": "interior",
         "level": 1,
-        "cost": 450000000.0
+        "cost": 645000000.0
       },
       {
         "item": "tandoor",
         "level": 0,
-        "cost": 1200000000.0
+        "cost": 1700000000.0
       },
       {
         "item": "tandoor",
         "level": 1,
-        "cost": 2040000000.0
+        "cost": 2890000000.0
+      },
+      {
+        "item": "delivery_app",
+        "level": 0,
+        "cost": 29000000000.0
+      },
+      {
+        "item": "delivery_app",
+        "level": 1,
+        "cost": 43500000000.0
       },
       {
         "item": "franchisee",
         "level": 0,
-        "cost": 3500000000000.0
+        "cost": 28000000000000.0
       },
       {
         "item": "franchisee",
         "level": 1,
-        "cost": 3920000000000.0005
+        "cost": 31360000000000.004
       },
       {
         "item": "franchisee",
         "level": 10,
-        "cost": 10870468729204.742
+        "cost": 86963749833637.94
       },
       {
         "item": "franchisee",
         "level": 25,
-        "cost": 59500225423249.52
+        "cost": 476001803385996.2
       },
       {
         "item": "regional_director",
         "level": 0,
-        "cost": 56000000000000.0
+        "cost": 460000000000000.0
       },
       {
         "item": "regional_director",
         "level": 1,
-        "cost": 63279999999999.99
+        "cost": 519799999999999.94
       },
       {
         "item": "regional_director",
         "level": 10,
-        "cost": 190095773835644.3
+        "cost": 1561500999364221.0
       },
       {
         "item": "regional_director",
         "level": 25,
-        "cost": 1188910367225711.0
+        "cost": 9766049445068340.0
       },
       {
         "item": "marketing_dept",
         "level": 0,
-        "cost": 840000000000000.0
+        "cost": 6800000000000000.0
       },
       {
         "item": "marketing_dept",
         "level": 1,
-        "cost": 957599999999999.9
+        "cost": 7751999999999999.0
       },
       {
         "item": "marketing_dept",
         "level": 10,
-        "cost": 3114065903859593.0
+        "cost": 2.520910493600623e+16
       },
       {
         "item": "marketing_dept",
         "level": 25,
-        "cost": 2.222800928236245e+16
+        "cost": 1.799410275238865e+17
       },
       {
         "item": "tv_campaign",
         "level": 0,
-        "cost": 70000000000000.0
+        "cost": 570000000000000.0
       },
       {
         "item": "tv_campaign",
         "level": 1,
-        "cost": 105000000000000.0
+        "cost": 855000000000000.0
       },
       {
         "item": "central_kitchen",
         "level": 0,
-        "cost": 280000000000000.0
+        "cost": 2300000000000000.0
       },
       {
         "item": "central_kitchen",
         "level": 1,
-        "cost": 476000000000000.0
+        "cost": 3910000000000000.0
       }
     ],
     "staff_income": [
@@ -1043,69 +1090,69 @@
       {
         "item": "sous_chef",
         "level": 1,
-        "income": 4500.0
+        "income": 6400.0
       },
       {
         "item": "sous_chef",
         "level": 24,
-        "income": 108000.0
+        "income": 153600.0
       },
       {
         "item": "sous_chef",
         "level": 25,
-        "income": 225000.0
+        "income": 320000.0
       },
       {
         "item": "sous_chef",
         "level": 50,
-        "income": 900000.0
+        "income": 1280000.0
       },
       {
         "item": "sous_chef",
         "level": 100,
-        "income": 3600000.0
+        "income": 5120000.0
       },
       {
         "item": "franchisee",
         "level": 1,
-        "income": 140000000.0
+        "income": 1100000000.0
       },
       {
         "item": "franchisee",
         "level": 24,
-        "income": 3360000000.0
+        "income": 26400000000.0
       },
       {
         "item": "franchisee",
         "level": 25,
-        "income": 7000000000.0
+        "income": 55000000000.0
       },
       {
         "item": "franchisee",
         "level": 50,
-        "income": 28000000000.0
+        "income": 220000000000.0
       },
       {
         "item": "franchisee",
         "level": 100,
-        "income": 112000000000.0
+        "income": 880000000000.0
       }
     ],
     "reputation": [
       {
-        "all_time_earnings": 1350000000000.0,
+        "all_time_earnings": 3850000000000000.0,
         "reputation_total": 7
       },
       {
-        "all_time_earnings": 2700000000000.0,
+        "all_time_earnings": 7700000000000000.0,
         "reputation_total": 10
       },
       {
-        "all_time_earnings": 27000000000000.0,
+        "all_time_earnings": 7.7e+16,
         "reputation_total": 31
       },
       {
-        "all_time_earnings": 2700000000000000.0,
+        "all_time_earnings": 7.7e+18,
         "reputation_total": 316
       }
     ],

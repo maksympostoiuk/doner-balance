@@ -285,17 +285,18 @@ def event_rules(cfg: EconomyConfig, impact: pd.DataFrame | None, mix: pd.DataFra
         life = row.earnings_change_pct
         if not np.isfinite(d):
             continue
-        if d > warn or life < -2 * warn:
+        shift = row.shift_h
+        if d > warn:
             used = mix[(mix["strategy"] == row.strategy) & (mix["event"] == row.event)]
             top = used.sort_values("count", ascending=False)["response"].iloc[0] if len(used) else e.default_response
             out.append(Recommendation(
                 40 + min(d, 40), "events", f"{e.name} hurts `{row.strategy}` too much",
-                f"With this event `{row.strategy}` reaches franchise {d:+.1f}% later in play time "
-                f"and has {life:+.0f}% earnings at the checkpoint (median of "
+                f"With this event `{row.strategy}` is {shift:+.1f} h behind by hour "
+                f"{cfg.analysis.event_checkpoint_hours:g} ({d:+.1f}%, median of "
                 f"{1 + len(cfg.simulation.extra_seeds)} seeds); most used answer: `{top}`.",
                 f"Halve the cost/losses of response `{top}` or lower `rate_per_hour` "
                 f"({e.rate_per_hour:g} → {nice(e.rate_per_hour / 2)})."))
-        elif d < -warn or life > 3 * warn:
+        elif d < -warn:
             best = max(((r, eff) for r in e.responses for eff in r.effects if eff.income_mult and eff.income_mult > 1),
                        key=lambda x: x[1].income_mult, default=None)
             act = ("Make the bonus smaller or pricier: "
@@ -303,13 +304,13 @@ def event_rules(cfg: EconomyConfig, impact: pd.DataFrame | None, mix: pd.DataFra
                       f" or raise its cost." if best else "raise response costs."))
             out.append(Recommendation(
                 30 + min(-d, 30), "events", f"{e.name} is a big buff for `{row.strategy}`",
-                f"With this event `{row.strategy}` reaches franchise {d:+.1f}% in play time and has "
-                f"{life:+.0f}% earnings at the checkpoint.",
+                f"With this event `{row.strategy}` is {-shift:.1f} h *ahead* by hour "
+                f"{cfg.analysis.event_checkpoint_hours:g} ({d:+.1f}%), earnings {life:+.0f}%.",
                 act + " Good events are fine, but at this size the economy is balanced around them."))
-        elif abs(d) < 1 and abs(life) < 3:
+        elif abs(d) < 1:
             out.append(Recommendation(
                 12, "events", f"{e.name} barely matters for `{row.strategy}`",
-                f"Effect on progress: {d:+.1f}% play time to franchise, {life:+.1f}% earnings.",
+                f"Effect on progress: {shift:+.1f} h by hour {cfg.analysis.event_checkpoint_hours:g} ({d:+.1f}%).",
                 f"If the {e.npc} should be a memorable NPC, raise stakes (rate {e.rate_per_hour:g}/h or "
                 f"effect size); otherwise it is flavour."))
     return out

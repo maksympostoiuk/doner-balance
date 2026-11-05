@@ -204,6 +204,10 @@ def _run_job(job: _Job) -> dict:
     ts = r.timeseries
     chk = ts[ts["t_h"] <= cfg.analysis.event_checkpoint_hours]
     out["log10_lifetime_at_check"] = math.log10(max(chk["lifetime_total"].iloc[-1], 1.0)) if len(chk) else 0.0
+    sess = r.sessions
+    out["sess_end_h"] = sess["end_h"].to_numpy()
+    out["sess_log_life"] = np.log10(np.maximum(sess["lifetime_total"].to_numpy(), 1.0))
+    out["hours_per_session"] = 24.0 / cfg.profiles[cfg.strategies[job.strategy].profile].sessions_per_day
     for eid, s in r.event_stats.items():
         out[f"{eid}__fired"] = s.fired
         out[f"{eid}__net"] = s.net
@@ -238,18 +242,40 @@ def event_impact_runs(cfg: EconomyConfig, strategies: list[str], jobs: int = 1) 
     return pd.DataFrame(rows)
 
 
+def progress_shift_h(with_row: pd.Series, without_row: pd.Series, checkpoint_h: float) -> float:
+    """Hours of progress an event costs by the checkpoint (positive = the event slows you down).
+
+    Progress is sampled at the end of every session (offline earnings arrive as a lump at
+    session start, so sampling inside the day would just measure session timing). Take the
+    all-time earnings of the run *with* the event after the last session before the checkpoint,
+    find (log-linear interpolation between sessions) at which fractional session the run
+    *without* the event had the same earnings, and convert the session difference to hours.
+    """
+    ends = with_row["sess_end_h"]
+    k = int(np.searchsorted(ends, checkpoint_h, side="right")) - 1
+    if k < 0:
+        return float("nan")
+    target = with_row["sess_log_life"][k]
+    y = np.maximum.accumulate(without_row["sess_log_life"])
+    if target > y[-1] or len(y) < 2:
+        return float("nan")
+    k_without = float(np.interp(target, y, np.arange(len(y))))
+    return (k - k_without) * with_row["hours_per_session"]
+
+
 def event_impact_table(cfg: EconomyConfig, runs: pd.DataFrame, milestone: str = "franchise") -> pd.DataFrame:
     """Per strategy and event: how much the event changes progress (median over seeds).
 
     Ablation: compare runs with all events against runs with that one event disabled
     (same seeds; every event has its own RNG stream so the others are unaffected).
 
-    * ``delay_play_min``: play time to ``milestone`` with the event minus without it
-      (positive = the event slows you down). Play time is used because calendar time is
-      quantized by sessions.
-    * ``delay_pct``: the same, relative to the time without the event.
-    * ``earnings_change_pct``: change of all-time earnings at the checkpoint
-      (``analysis.event_checkpoint_hours``) caused by the event.
+    * ``shift_h``: hours of progress the event costs at the checkpoint
+      (``analysis.event_checkpoint_hours``), see :func:`progress_shift_h`; positive = slower.
+    * ``delay_pct``: ``shift_h`` relative to the checkpoint (the headline number).
+    * ``delay_play_min``: extra play time to reach ``milestone`` (coarse: purchases happen
+      in sessions).
+    * ``earnings_change_pct``: change of all-time earnings at the checkpoint (noisy, because
+      earnings grow exponentially).
     * ``net_pct_of_lifetime``: direct accounting of the event (income gained/lost through
       its modifiers + cash gained - response costs - cash lost) relative to final earnings.
     """
@@ -267,12 +293,15 @@ def event_impact_table(cfg: EconomyConfig, runs: pd.DataFrame, milestone: str = 
             delay = with_ - without
             life = 100.0 * (10 ** (base.loc[seeds, "log10_lifetime_at_check"]
                                    - alt.loc[seeds, "log10_lifetime_at_check"]) - 1.0)
+            chk = cfg.analysis.event_checkpoint_hours
+            shifts = pd.Series([progress_shift_h(base.loc[sd], alt.loc[sd], chk) for sd in seeds], dtype=float)
             row = {
                 "strategy": strat, "event": eid if eid != "ALL" else "all events",
+                "shift_h": float(shifts.median()),
+                "delay_pct": float((100 * shifts / chk).median()),
                 f"{milestone}_day_with": float(base.loc[seeds, milestone].median() / 24),
                 f"{milestone}_day_without": float(alt.loc[seeds, milestone].median() / 24),
                 "delay_play_min": float((60 * delay).median()),
-                "delay_pct": float((100 * delay / without).median()),
                 "earnings_change_pct": float(life.median()),
             }
             if eid != "ALL":

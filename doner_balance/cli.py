@@ -101,6 +101,16 @@ def cmd_tune(a: argparse.Namespace) -> int:
                  "# Use with: python -m doner_balance report --overrides " + str(out) + "\n"
                  "# or copy the values into config/economy.yaml.\n")
         yaml.safe_dump(res.overrides, fh, sort_keys=False)
+    if a.write_config:
+        from .tuning import nice, patch_yaml_text
+
+        text = Path(a.config).read_text(encoding="utf-8")
+        rounded = {k: nice(v, 2) for k, v in res.overrides.items()}
+        new_text = patch_yaml_text(text, rounded)
+        config_from_dict(yaml.safe_load(new_text))  # must still validate
+        Path(a.config).write_text(new_text, encoding="utf-8")
+        print(f"Updated {len(rounded)} values in {a.config} (rounded to 2 significant digits, comments kept).")
+        res.data = yaml.safe_load(new_text)
     tuned = config_from_dict(res.data)
     checks = check_targets(tuned, simulate(tuned, ref))
     print(f"\nWrote {len(res.overrides)} overrides to {out}. Result:")
@@ -152,6 +162,8 @@ def main(argv: list[str] | None = None) -> int:
     t = sub.add_parser("tune", help="distance to pacing targets + suggestions")
     t.add_argument("--apply", nargs="?", const="reports/tuned_overrides.yaml", default=None,
                    help="auto-tune and write overrides YAML (default path: %(const)s)")
+    t.add_argument("--write-config", action="store_true",
+                   help="with --apply: also write the tuned values into the config file (keeps comments)")
     t.set_defaults(func=cmd_tune)
 
     e = sub.add_parser("export", help="write the Godot JSON export")

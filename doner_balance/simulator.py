@@ -35,6 +35,7 @@ class SimResult:
     milestones: dict[str, tuple[float, float]]  # name -> (calendar_h, active_h)
     event_stats: dict[str, EventStats]
     final: dict[str, float] = field(default_factory=dict)
+    sessions: pd.DataFrame = field(default_factory=pd.DataFrame)  # one row per finished session
 
     def milestone_hours(self, name: str, clock: str = "calendar") -> float | None:
         m = self.milestones.get(name)
@@ -65,6 +66,7 @@ class Simulator:
         self.earned = {"tap": 0.0, "auto": 0.0, "offline": 0.0}
         self.milestones: dict[str, tuple[float, float]] = {}
         self.purchases: list[dict] = []
+        self.session_rows: list[dict] = []
         self.rows: list[dict] = []
         self._next_record = 0.0
         self._refresh()
@@ -228,6 +230,11 @@ class Simulator:
             self.target = None
             self._shop()
             self._active(end)
+            self.session_rows.append({
+                "session": len(self.session_rows), "end_h": self.t / 3600.0, "active_h": self.active_t / 3600.0,
+                "lifetime_total": self.st.lifetime_total, "effective_rate": self.strategy.effective_rate(self.st),
+                "tiers_owned": self.st.tiers_owned, "prestiges": self.st.prestiges,
+            })
         if self.t < horizon and not self.stopped:
             self._offline(horizon)  # trailing offline time is never collected
         self._record(active=False, force=True)
@@ -253,7 +260,7 @@ class Simulator:
             **{f"earned_{k}": v for k, v in self.earned.items()},
         }
         return SimResult(self.strategy.name, self.seed, self.disabled, pd.DataFrame(self.rows), purchases,
-                         ev, dict(self.milestones), self.events.stats, final)
+                         ev, dict(self.milestones), self.events.stats, final, pd.DataFrame(self.session_rows))
 
 
 def simulate(cfg: EconomyConfig, strategy: str, seed: int | None = None,

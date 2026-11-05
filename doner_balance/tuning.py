@@ -282,3 +282,56 @@ def apply_overrides(data: dict[str, Any], overrides: dict[str, Any]) -> dict[str
     for p, v in overrides.items():
         set_path(new, p, v)
     return new
+
+
+def format_yaml_number(v: float) -> str:
+    """YAML-safe number text (PyYAML needs a dot in scientific notation)."""
+    if float(v).is_integer() and abs(v) < 1e6:
+        return str(int(v))
+    if abs(v) >= 1e6:
+        exp = int(math.floor(math.log10(abs(v))))
+        mant = f"{v / 10**exp:.3g}"
+        if "." not in mant:
+            mant += ".0"
+        return f"{mant}e+{exp}"
+    return repr(float(v))
+
+
+def patch_yaml_text(text: str, overrides: dict[str, float]) -> str:
+    """Write dotted-path overrides into block-style YAML text, keeping comments and layout.
+
+    List items are located by their ``- id: <id>`` line, mapping keys by ``key:``; the value of
+    the final key is replaced in place and an existing trailing comment is kept.
+    """
+    import re
+
+    lines = text.split("\n")
+    for path, value in overrides.items():
+        parts = path.split(".")
+        pos = 0
+        indent = -1
+        for k, part in enumerate(parts):
+            last = k == len(parts) - 1
+            found = None
+            for i in range(pos, len(lines)):
+                ln = lines[i]
+                stripped = ln.lstrip(" ")
+                ind = len(ln) - len(stripped)
+                if stripped and not stripped.startswith("#") and ind <= indent and i > pos:
+                    break  # left the current block
+                if re.match(rf"-\s+id:\s*{re.escape(part)}\s*(#.*)?$", stripped):
+                    found, indent = i, ind + 1
+                    break
+                if re.match(rf"{re.escape(part)}\s*:", stripped):
+                    found, indent = i, ind
+                    break
+            if found is None:
+                raise KeyError(f"cannot locate '{part}' of '{path}' in the YAML text")
+            pos = found
+            if last:
+                ln = lines[found]
+                m = re.match(rf"^(\s*(?:-\s+)?{re.escape(part)}\s*:\s*)([^#]*?)(\s*#.*)?$", ln)
+                if not m:
+                    raise KeyError(f"cannot rewrite line for '{path}': {ln!r}")
+                lines[found] = m.group(1) + format_yaml_number(value) + (m.group(3) or "")
+    return "\n".join(lines)

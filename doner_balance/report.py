@@ -93,7 +93,7 @@ def build(cfg: EconomyConfig, out_dir: Path, export_path: Path | None, jobs: int
         n_runs = len(strategies) * (1 + len(cfg.simulation.extra_seeds)) * (2 + sum(e.enabled for e in cfg.events))
         _log(f"[3/6] NPC event ablation: {n_runs} runs on {jobs} workers ...", quiet)
         ev_runs = A.event_impact_runs(cfg, strategies, jobs=jobs)
-        ev_runs.to_csv(out_dir / "event_impact_runs.csv", index=False)
+        ev_runs.drop(columns=["sess_end_h", "sess_log_life"]).to_csv(out_dir / "event_impact_runs.csv", index=False)
         impact = A.event_impact_table(cfg, ev_runs)
     else:
         _log("[3/6] NPC event ablation skipped", quiet)
@@ -113,7 +113,8 @@ def build(cfg: EconomyConfig, out_dir: Path, export_path: Path | None, jobs: int
         "payback": C.payback_chart(results, out_dir / "payback.png"),
     }
     if impact is not None:
-        charts["events"] = C.event_impact_chart(impact, out_dir / "event_impact.png")
+        charts["events"] = C.event_impact_chart(impact, out_dir / "event_impact.png",
+                                                  cfg.analysis.event_checkpoint_hours)
         impact.to_csv(out_dir / "event_impact.csv", index=False)
     ms.to_csv(out_dir / "milestones.csv", index=False)
     zones.to_csv(out_dir / "dead_zones.csv", index=False)
@@ -294,15 +295,22 @@ def render(d: ReportData, config_label: str, export_path: Path | None) -> str:
         n_seeds = 1 + len(cfg.simulation.extra_seeds)
         w(f"Ablation study over {n_seeds} seeds: each event type is switched off on its own and the run is compared "
           "with the run where it is on. Every event type has its own random stream, so switching one off does not "
-          "change the others. *delay* = extra play time to reach franchise because of the event (negative = the "
-          f"event speeds you up); *earnings* = all-time earnings at hour {cfg.analysis.event_checkpoint_hours:g}; "
-          "*net* = direct accounting (bonus income − lost income − answer costs − cash losses) / final earnings.\n")
-        imp = d.impact.copy()
-        cols = ["strategy", "event", "fired_per_run", "delay_play_min", "delay_pct", "earnings_change_pct",
-                "net_pct_of_lifetime"]
-        w(md_table(imp[cols], {"fired_per_run": lambda v: "—" if not np.isfinite(v) else f"{v:.1f}",
-                               "delay_play_min": lambda v: f"{v:+.0f} min" if np.isfinite(v) else "—",
-                               "delay_pct": _pct, "earnings_change_pct": _pct, "net_pct_of_lifetime": _pct}))
+          "change the others.\n")
+        chk = cfg.analysis.event_checkpoint_hours
+        w(f"- **shift** — hours of progress the event costs by hour {chk:g}: the run without the event reached the "
+          "same all-time earnings that much earlier (negative = the event speeds you up). **delay %** = shift / "
+          f"{chk:g} h. This is the headline number.")
+        w("- **franchise play** — extra play time to reach the franchise (coarse: purchases happen in sessions).")
+        w(f"- **earnings** — all-time earnings at hour {chk:g} with vs without (noisy: earnings grow exponentially).")
+        w("- **net** — direct accounting (bonus income − lost income − answer costs − cash losses) / final earnings.\n")
+        imp = d.impact.rename(columns={"delay_play_min": "franchise play", "earnings_change_pct": "earnings",
+                                       "net_pct_of_lifetime": "net", "delay_pct": "delay %",
+                                       "fired_per_run": "fired/run", "shift_h": "shift"})
+        cols = ["strategy", "event", "fired/run", "shift", "delay %", "franchise play", "earnings", "net"]
+        w(md_table(imp[cols], {"fired/run": lambda v: "—" if not np.isfinite(v) else f"{v:.1f}",
+                               "shift": lambda v: f"{v:+.1f} h" if np.isfinite(v) else "—",
+                               "franchise play": lambda v: f"{v:+.0f} min" if np.isfinite(v) else "—",
+                               "delay %": _pct, "earnings": _pct, "net": _pct}))
         w(f"\n![event impact]({d.charts['events'].name})\n")
     w("Answers chosen (main runs):\n")
     if len(d.mix):

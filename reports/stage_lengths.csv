@@ -1,16 +1,16 @@
 strategy,stage,calendar_h,play_min,ends_with
 best_roi,kiosk,0.14194444444444446,8.516666666666667,cafe
-best_roi,cafe,9.945833333333333,16.75,restaurant
-best_roi,restaurant,138.91222222222223,164.73333333333332,franchise
-best_roi,franchise,77.0,99.99999999999999,first_prestige
+best_roi,cafe,23.858055555555556,21.483333333333334,restaurant
+best_roi,restaurant,125.0,160.0,franchise
+best_roi,franchise,149.0,190.0,first_prestige
 cheapest,kiosk,5.0,10.0,cafe
 cheapest,cafe,43.0,50.0,restaurant
 cheapest,restaurant,456.0,570.0,(end of run)
 saver,kiosk,0.09722222222222222,5.833333333333333,cafe
 saver,cafe,9.902777777777779,14.166666666666666,restaurant
 saver,restaurant,139.0,169.99999999999997,franchise
-saver,franchise,77.0,99.99999999999999,first_prestige
+saver,franchise,149.0,190.0,first_prestige
 casual,kiosk,6.5569444444444445,8.416666666666666,cafe
 casual,cafe,41.44305555555555,11.583333333333332,restaurant
-casual,restaurant,240.0,100.0,franchise
-casual,franchise,126.5,54.99999999999999,first_prestige
+casual,restaurant,216.0,90.0,franchise
+casual,franchise,216.0,90.00000000000001,first_prestige

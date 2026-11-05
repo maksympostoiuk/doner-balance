@@ -115,3 +115,23 @@ def test_dead_zone_detection(default_cfg):
     thr = default_cfg.analysis.dead_zone_threshold_active_minutes
     assert (z["gap_active_min"] > thr).all()
     assert math.isclose(z["gap_active_min"].sum() <= r.final["active_hours"] * 60, True)
+
+
+def test_progress_shift_metric():
+    import numpy as np
+
+    from doner_balance.analysis import progress_shift_h
+
+    ends = np.array([1.0, 5.0, 10.0, 25.0, 29.0, 34.0])
+    without = pd.Series({"sess_end_h": ends, "sess_log_life": np.arange(6.0), "hours_per_session": 8.0})
+    same = pd.Series({"sess_end_h": ends, "sess_log_life": np.arange(6.0), "hours_per_session": 8.0})
+    behind = pd.Series({"sess_end_h": ends, "sess_log_life": np.arange(6.0) - 1.5, "hours_per_session": 8.0})
+    assert progress_shift_h(same, without, 30) == pytest.approx(0)
+    # one and a half sessions behind = 12 hours of progress lost
+    assert progress_shift_h(behind, without, 30) == pytest.approx(12)
+
+
+def test_session_log(default_cfg):
+    r = simulate(default_cfg, "best_roi", days=2)
+    assert len(r.sessions) == 6
+    assert r.sessions["lifetime_total"].is_monotonic_increasing
