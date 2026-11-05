@@ -28,6 +28,7 @@ class ReportData:
     cfg: EconomyConfig
     results: dict[str, SimResult]
     milestones: pd.DataFrame
+    spread: pd.DataFrame
     zones: pd.DataFrame
     zone_summary: pd.DataFrame
     sources: pd.DataFrame
@@ -121,6 +122,12 @@ def build(
 
     _log("[2/6] analysing milestones, dead zones, income sources ...", quiet)
     ms = A.milestone_table(cfg, results)
+    n_seeds = 1 + len(cfg.simulation.extra_seeds)
+    if n_seeds > 1:
+        _log(f"      milestone spread: {len(cfg.strategies)} strategies x {n_seeds} seeds ...", quiet)
+        spread = A.milestone_spread(cfg, A.milestone_spread_runs(cfg, list(cfg.strategies), jobs=jobs))
+    else:
+        spread = pd.DataFrame(columns=["strategy", "milestone", "seeds", "reached", "median_h", "p10_h", "p90_h"])
     zones = pd.concat([A.dead_zones(cfg, r) for r in results.values()], ignore_index=True)
     zones["stage"] = zones["stage"].map(lambda c: A.stage_name(cfg, c))
     zsum = A.dead_zone_summary(cfg, zones, results)
@@ -159,7 +166,7 @@ def build(
     charts = {
         "income": C.income_chart(results, out_dir / "income_per_second.png"),
         "sources": C.income_sources_chart(sources, out_dir / "income_sources.png"),
-        "milestones": C.milestones_chart(cfg, ms, out_dir / "milestones.png"),
+        "milestones": C.milestones_chart(cfg, ms, out_dir / "milestones.png", spread),
         "dead_zones": C.dead_zones_chart(cfg, zones, list(results), out_dir / "dead_zones.png"),
         "payback": C.payback_chart(results, out_dir / "payback.png"),
     }
@@ -169,6 +176,7 @@ def build(
         )
         impact.to_csv(out_dir / "event_impact.csv", index=False)
     ms.to_csv(out_dir / "milestones.csv", index=False)
+    spread.to_csv(out_dir / "milestone_spread.csv", index=False)
     zones.to_csv(out_dir / "dead_zones.csv", index=False)
     zsum.to_csv(out_dir / "dead_zone_summary.csv", index=False)
     sources.to_csv(out_dir / "income_sources.csv", index=False)
@@ -229,6 +237,7 @@ def build(
         cfg,
         results,
         ms,
+        spread,
         zones,
         zsum,
         sources,
@@ -378,6 +387,26 @@ def render(d: ReportData, config_label: str, export_path: Path | None) -> str:
             row[m] = "—" if not v["reached"] else f"{fmt_h(v['calendar_h'])} ({fmt_h(v['active_min'] / 60)})"
         rows.append(row)
     w(md_table(pd.DataFrame(rows)))
+    if len(d.spread):
+        n_seeds = int(d.spread["seeds"].max())
+        w(
+            f"\nSpread over {n_seeds} seeds (`simulation.seed` + `extra_seeds`): median, and 10th–90th percentile in "
+            "brackets; a percentage means only that share of seeds reached the milestone.\n"
+        )
+        rows = []
+        for strat in d.results:
+            sub_ = d.spread[d.spread["strategy"] == strat].set_index("milestone")
+            row = {"strategy": strat}
+            for m in order:
+                v = sub_.loc[m]
+                if v["reached"] == 0:
+                    row[m] = "—"
+                    continue
+                lo, hi = fmt_h(v["p10_h"]), fmt_h(v["p90_h"])
+                cell = fmt_h(v["median_h"]) + ("" if lo == hi else f" ({lo}–{hi})")
+                row[m] = cell + (f" {v['reached']:.0%}" if v["reached"] < 1 else "")
+            rows.append(row)
+        w(md_table(pd.DataFrame(rows)))
     w(f"\n{_img(d, 'milestones')}\n")
 
     # ---------------------------------------------------------------- pacing
@@ -561,6 +590,7 @@ def render(d: ReportData, config_label: str, export_path: Path | None) -> str:
     w("| file | content |\n|---|---|")
     files = [
         ("milestones.csv", "time to every milestone per strategy (calendar h, play min)"),
+        ("milestone_spread.csv", "median / 10th / 90th percentile of every milestone over all seeds"),
         ("pacing_targets.csv", "targets, actual values, lever, elasticity, suggestion"),
         ("dead_zones.csv / dead_zone_summary.csv", "every dead zone and per-strategy totals"),
         ("income_sources.csv", "coins per day from taps / automation / offline"),

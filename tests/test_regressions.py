@@ -281,3 +281,22 @@ def test_cli_write_config_refuses_overrides(tmp_path, capsys):
     ov.write_text("tiers.cafe.unlock_cost: 40000\n")
     rc, out = _run_cli(["--overrides", str(ov), "tune", "--apply", str(tmp_path / "o.yaml"), "--write-config"], capsys)
     assert rc == 2 and "cannot be combined" in out.err
+
+
+# --------------------------------------------------------------------------- open items
+
+
+def test_milestone_spread_over_seeds(default_cfg):
+    from doner_balance.analysis import milestone_spread, milestone_spread_runs
+
+    cfg = default_cfg.model_copy(deep=True)
+    cfg.simulation.days = 2
+    cfg.simulation.extra_seeds = [1, 2]
+    runs = milestone_spread_runs(cfg, ["best_roi", "casual"], jobs=1)
+    assert len(runs) == 6
+    sp = milestone_spread(cfg, runs)
+    row = sp[(sp["strategy"] == "best_roi") & (sp["milestone"] == "cafe")].iloc[0]
+    assert row["seeds"] == 3 and row["reached"] == 1.0
+    assert row["p10_h"] <= row["median_h"] <= row["p90_h"]
+    never = sp[(sp["strategy"] == "casual") & (sp["milestone"] == "franchise")].iloc[0]
+    assert never["reached"] == 0 and math.isnan(never["median_h"])

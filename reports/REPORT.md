@@ -41,6 +41,15 @@ Calendar time since install (play time in brackets). Strategies:
 | saver | 4 s (4 s) | 1.8 min (1.8 min) | 5.8 min (5.8 min) | 10.0 h (20.0 min) | 6.2 d (3.2 h) | 12.4 d (6.3 h) |
 | casual | 12 s (12 s) | 4.0 min (4.0 min) | 6.6 h (8.4 min) | 2.0 d (20.0 min) | 11.0 d (1.8 h) | 20.0 d (3.3 h) |
 
+Spread over 5 seeds (`simulation.seed` + `extra_seeds`): median, and 10th–90th percentile in brackets; a percentage means only that share of seeds reached the milestone.
+
+| strategy | first_upgrade | first_manager | cafe | restaurant | franchise | first_prestige |
+|---|---|---|---|---|---|---|
+| best_roi | 4 s | 1.8 min | 8.5 min | 24.0 h | 6.2 d | 13.0 d (12.4 d–13.0 d) |
+| cheapest | 4 s | 6.8 min | 5.0 h | 2.0 d | — | — |
+| saver | 4 s | 1.8 min | 5.8 min | 10.0 h | 6.2 d | 13.0 d (12.4 d–13.0 d) |
+| casual | 12 s | 4.0 min | 6.6 h | 2.0 d | 10.3 d (10.1 d–11.0 d) | 20.0 d (19.4 d–20.0 d) |
+
 ![Dot chart: calendar time for each strategy to reach each milestone, log scale, with target bands](milestones.png)
 
 ## 2. Pacing vs targets
@@ -218,6 +227,7 @@ Sorted by severity (0–100). Rules live in `doner_balance/recommend.py`; thresh
 | file | content |
 |---|---|
 | `milestones.csv` | time to every milestone per strategy (calendar h, play min) |
+| `milestone_spread.csv` | median / 10th / 90th percentile of every milestone over all seeds |
 | `pacing_targets.csv` | targets, actual values, lever, elasticity, suggestion |
 | `dead_zones.csv / dead_zone_summary.csv` | every dead zone and per-strategy totals |
 | `income_sources.csv` | coins per day from taps / automation / offline |
@@ -230,4 +240,4 @@ Sorted by severity (0–100). Rules live in `doner_balance/recommend.py`; thresh
 | `recommendations.csv` | the findings above as a table |
 | `export/economy.json` | Godot export of this config (see `docs/GODOT_EXPORT.md`) |
 
-_Generated in 22 s._
+_Generated in 30 s._

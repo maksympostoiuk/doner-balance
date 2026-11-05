@@ -265,11 +265,43 @@ def event_impact_runs(cfg: EconomyConfig, strategies: list[str], jobs: int = 1) 
     variants: list[tuple[str, ...]] = list(dict.fromkeys([(), tuple(ids), *[(i,) for i in ids]]))
     cfg_json = cfg.model_dump_json()
     work = [_Job(cfg_json, s, seed, v) for s in strategies for seed in seeds for v in variants]
-    if jobs > 1:
+    return pd.DataFrame(_run_all(work, jobs))
+
+
+def _run_all(work: list[_Job], jobs: int) -> list[dict]:
+    if jobs > 1 and len(work) > 1:
         with ProcessPoolExecutor(max_workers=jobs) as ex:
-            rows = list(ex.map(_run_job, work))
-    else:
-        rows = [_run_job(j) for j in work]
+            return list(ex.map(_run_job, work))
+    return [_run_job(j) for j in work]
+
+
+def milestone_spread_runs(cfg: EconomyConfig, strategies: list[str], jobs: int = 1) -> pd.DataFrame:
+    """Every strategy over every seed (``simulation.seed`` + ``extra_seeds``), all events on."""
+    seeds = [cfg.simulation.seed, *cfg.simulation.extra_seeds]
+    cfg_json = cfg.model_dump_json()
+    return pd.DataFrame(_run_all([_Job(cfg_json, s, seed, ()) for s in strategies for seed in seeds], jobs))
+
+
+def milestone_spread(cfg: EconomyConfig, runs: pd.DataFrame) -> pd.DataFrame:
+    """Median and 10th/90th percentile of every milestone (calendar hours) over the seeds.
+
+    ``reached`` is the share of seeds that reached the milestone; percentiles use only those.
+    """
+    rows = []
+    for strat, g in runs.groupby("strategy", sort=False):
+        for m in milestone_names(cfg):
+            v = pd.to_numeric(g[m], errors="coerce").dropna()
+            rows.append(
+                {
+                    "strategy": strat,
+                    "milestone": m,
+                    "seeds": len(g),
+                    "reached": len(v) / len(g),
+                    "median_h": float(v.median()) if len(v) else np.nan,
+                    "p10_h": float(v.quantile(0.1)) if len(v) else np.nan,
+                    "p90_h": float(v.quantile(0.9)) if len(v) else np.nan,
+                }
+            )
     return pd.DataFrame(rows)
 
 

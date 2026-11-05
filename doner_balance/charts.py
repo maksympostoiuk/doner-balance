@@ -214,7 +214,7 @@ def income_sources_chart(sources: pd.DataFrame, out: Path) -> Path:
     return _save(fig, out)
 
 
-def milestones_chart(cfg: EconomyConfig, table: pd.DataFrame, out: Path) -> Path:
+def milestones_chart(cfg: EconomyConfig, table: pd.DataFrame, out: Path, spread: pd.DataFrame | None = None) -> Path:
     _style()
     names = list(dict.fromkeys(table["strategy"]))
     colors, markers = strategy_colors(names), strategy_markers(names)
@@ -225,6 +225,18 @@ def milestones_chart(cfg: EconomyConfig, table: pd.DataFrame, out: Path) -> Path
         d = table[table["strategy"] == name].set_index("milestone").reindex(ms)
         y = np.arange(len(ms)) + off
         x = d["calendar_h"].clip(lower=1 / 120)  # 30 s floor for the log axis
+        if spread is not None and len(spread):
+            sp = spread[spread["strategy"] == name].set_index("milestone").reindex(ms)
+            ok = sp["p10_h"].notna().to_numpy()
+            ax.hlines(
+                y[ok],
+                sp["p10_h"].clip(lower=1 / 120)[ok],
+                sp["p90_h"].clip(lower=1 / 120)[ok],
+                color=colors[name],
+                linewidth=2,
+                alpha=0.45,
+                zorder=2,
+            )
         ax.scatter(
             x, y, s=60, color=colors[name], marker=markers[name], edgecolor=SURFACE, linewidth=1.5, label=name, zorder=3
         )
@@ -257,7 +269,10 @@ def milestones_chart(cfg: EconomyConfig, table: pd.DataFrame, out: Path) -> Path
     ax.set_xticks([ticks[i] for i in keep])
     ax.set_xticklabels([labels[i] for i in keep])
     ax.set_xlim(1 / 120, cfg.simulation.days * 24 * 1.15)
-    ax.set_xlabel("calendar time since install (log); grey band = calendar target ± tolerance; hollow = not reached")
+    ax.set_xlabel(
+        "calendar time since install (log); dot = main seed, bar = 10th-90th percentile over seeds;\n"
+        "grey band = calendar target ± tolerance; hollow = not reached"
+    )
     ax.set_title("Time to reach each milestone", pad=28)
     ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=len(names), handletextpad=0.2)
     ax.grid(axis="y", visible=False)
