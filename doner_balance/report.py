@@ -581,14 +581,14 @@ def render(d: ReportData, config_label: str, export_path: Path | None) -> str:
         }
         prows = []
         for pk in sorted(cfg.prestige.perks, key=lambda p: p.reputation):
-            row: dict[str, Any] = {
+            perk_row: dict[str, Any] = {
                 "perk": pk.name,
                 "reputation": pk.reputation,
                 "effect": effect_txt[pk.effect].format(v=f"{pk.value:g}"),
             }
             for n, res in d.results.items():
-                row[n] = "✓" if res.final["reputation"] >= pk.reputation else "—"
-            prows.append(row)
+                perk_row[n] = "✓" if res.final["reputation"] >= pk.reputation else "—"
+            prows.append(perk_row)
         w(md_table(pd.DataFrame(prows)))
         w("\n✓ = unlocked by the end of the run.\n")
 
