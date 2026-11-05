@@ -191,7 +191,7 @@ in `pacing.targets`; change it and re-run `tune --apply`.
 
 ## Second-pass summary
 
-**State of the tooling.** 148 tests (was 81), ruff lint + format clean, mypy clean, GDScript
+**State of the tooling.** 147 tests (was 81), ruff lint + format clean, mypy clean, GDScript
 lint/format clean, sdist + wheel build and install verified — all in `scripts/check.sh`. The
 review fixed 9 correctness bugs (most visible: smart players wasting money on maxed NPC bonuses,
 tier names hardcoded so renamed/added tiers silently lost data, ablation crash with one NPC event,
