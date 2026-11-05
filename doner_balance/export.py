@@ -23,6 +23,8 @@ FORMAT_VERSION = 2  # v2: name_key on every named object + "localization" sectio
 FORMULAS = {
     "level_cost": "base_cost * pow(cost_growth, level)   # level = levels already owned",
     "bulk_cost": "base_cost * pow(cost_growth, level) * (pow(cost_growth, n) - 1) / (cost_growth - 1)",
+    "max_affordable": "floor(log(cash * (cost_growth - 1) / level_cost(level) + 1) / log(cost_growth)), "
+    "then step down while bulk_cost > cash (float guard); 0 if cash < level_cost(level)",
     "milestone_mult": "product of mult for every staff_milestones entry with level >= entry.level",
     "staff_income": "level * income * milestone_mult(level)",
     "tier_income": "sum(staff_income) * (1 + sum(value*level of 'income' upgrades))"
@@ -111,7 +113,19 @@ def _test_vectors(cfg: EconomyConfig) -> dict[str, Any]:
             "offline_cap_hours": econ.offline_cap_hours(st),
         },
     }
-    return {"level_cost": costs, "staff_income": staff, "reputation": rep, "sample_state": sample}
+    bulk = []
+    for it in leveled[:3]:
+        for lv, cash in ((0, it.base_cost * 0.5), (0, it.base_cost * 25), (5, it.base_cost * 1e3)):
+            bulk.append(
+                {
+                    "item": it.id,
+                    "level": lv,
+                    "cash": cash,
+                    "max_affordable": F.max_affordable(it.base_cost, it.cost_growth, lv, cash),
+                    "bulk_cost_10": F.bulk_cost(it.base_cost, it.cost_growth, lv, 10),
+                }
+            )
+    return {"level_cost": costs, "staff_income": staff, "reputation": rep, "bulk": bulk, "sample_state": sample}
 
 
 def build_export(cfg: EconomyConfig) -> dict[str, Any]:

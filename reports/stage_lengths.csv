@@ -14,6 +14,10 @@ casual,kiosk,6.5569444444444445,8.416666666666666,cafe
 casual,cafe,41.44305555555555,11.583333333333332,restaurant
 casual,restaurant,216.0,90.0,franchise
 casual,franchise,216.0,90.00000000000001,first_prestige
+buy_max,kiosk,0.14194444444444446,8.516666666666667,cafe
+buy_max,cafe,23.888055555555557,23.283333333333335,restaurant
+buy_max,restaurant,124.97,158.2,franchise
+buy_max,franchise,144.0,180.00000000000003,first_prestige
 irregular,kiosk,0.14333333333333334,8.6,cafe
 irregular,cafe,23.74986014342053,25.283333333333335,restaurant
 irregular,restaurant,154.1526996032773,196.75305964611834,franchise

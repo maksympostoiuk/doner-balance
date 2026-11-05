@@ -142,6 +142,7 @@ class Simulator:
                 "kind": opt.kind,
                 "item": opt.id,
                 "level": level,
+                "count": opt.count,
                 "cost": opt.cost,
                 "tier": self.cfg.tiers[opt.tier].id if opt.tier >= 0 else "tap",
                 "rate_before": before,
@@ -169,6 +170,7 @@ class Simulator:
                 "active_h": self.active_t / 3600.0,
                 "run": self.st.prestiges,
                 "kind": "prestige",
+                "count": 1,
                 "item": f"+{gain} {self.cfg.prestige.currency_name}",
                 "level": self.st.reputation,
                 "cost": 0.0,
@@ -191,9 +193,12 @@ class Simulator:
                 continue
             if self.target is None:
                 self.target = self.strategy.choose(self.st)
-            if self.target is None or self.st.cash + 1e-9 < self.target.cost:
+            if self.target is None:
                 return
-            self._buy(self.target)
+            order = self.econ.bulk(self.st, self.target, self.strategy.buy_amount)
+            if self.st.cash + 1e-9 < order.cost:
+                return
+            self._buy(order)
             self.target = None
 
     def _handle_events(self) -> None:
@@ -301,6 +306,7 @@ class Simulator:
                 "kind",
                 "item",
                 "level",
+                "count",
                 "cost",
                 "tier",
                 "rate_before",

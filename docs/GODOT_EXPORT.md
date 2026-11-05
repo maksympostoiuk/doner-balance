@@ -76,6 +76,7 @@ Times are hours where the key ends in `_hours`, otherwise seconds.
 ```
 level_cost(level)   = base_cost * cost_growth ^ level            # level = already owned
 bulk_cost(level, n) = base_cost * g^level * (g^n - 1) / (g - 1)
+max_affordable      = floor(log(cash*(g-1)/level_cost(level) + 1) / log(g)), stepped down while bulk_cost > cash
 milestone_mult(L)   = product of mult over staff_milestones with L >= level
 staff_income(L)     = L * income * milestone_mult(L)
 tier_income         = sum(staff_income) * (1 + Σ income upgrades value*level)
@@ -97,6 +98,7 @@ reputation_total    = floor(scale * (all_time_earnings / base_requirement) ^ exp
 - `level_cost`: `[{item, level, cost}]`
 - `staff_income`: `[{item, level, income}]` (around milestone boundaries)
 - `reputation`: `[{all_time_earnings, reputation_total}]`
+- `bulk`: `[{item, level, cash, max_affordable, bulk_cost_10}]` (the "buy max" / "x10" buttons)
 - `sample_state`: `{tiers_owned, levels, managers, reputation, expected: {global_mult, auto_income, tap_value, offline_income_per_sec, offline_cap_hours}}`
   (no event modifiers active).
 
@@ -120,7 +122,7 @@ default language so a missing text shows the default-language name instead of th
 
 - **v2** — `name_key` on every named object, `economy_name_key`, `prestige.currency_name_key`,
   top-level `localization`, `translations.csv` next to the JSON. GDScript: `display_name()`,
-  `reputation_gain()`, `can_sell_empire()`.
+  `reputation_gain()`, `can_sell_empire()`, `max_affordable()`; `test_vectors.bulk`.
 - **v1** — first version.
 
 ## Versioning

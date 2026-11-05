@@ -35,6 +35,7 @@ class Option:
     id: str
     cost: float
     tier: int  # tier index the item belongs to (-1 for tap upgrades)
+    count: int = 1  # levels bought at once (bulk buy); always 1 for tiers and managers
 
 
 def modifier_key(event_id: str, response_id: str, effect_index: int) -> str:
@@ -283,7 +284,38 @@ class Economy:
         elif opt.kind == "manager":
             st.managers.add(opt.id)
         else:
-            st.levels[opt.id] = st.level(opt.id) + 1
+            st.levels[opt.id] = st.level(opt.id) + opt.count
+
+    def leveled_item(self, opt: Option) -> TapUpgrade | Staff | TierUpgrade | None:
+        if opt.kind == "tap":
+            return self.tap_upgrades[opt.id]
+        if opt.kind == "staff":
+            return self.staff[opt.id][1]
+        if opt.kind == "upgrade":
+            return self.upgrades[opt.id][1]
+        return None
+
+    def bulk(self, st: GameState, opt: Option, amount: int | str) -> Option:
+        """Turn a single-level option into a bulk purchase (x10, x100 or "max").
+
+        ``max`` buys as many levels as the cash allows (at least one); a fixed amount needs the
+        whole bundle to be affordable, like the x10 button in the game. Bundles never exceed
+        ``max_level``. Tiers and managers are always bought one at a time.
+        """
+        it = self.leveled_item(opt)
+        if it is None or amount == 1:
+            return opt
+        level = st.level(opt.id)
+        remaining = (it.max_level - level) if it.max_level is not None else 10**9
+        if amount == "max":
+            n = min(F.max_affordable(it.base_cost, it.cost_growth, level, st.cash), remaining)
+            if n < 1:
+                return opt
+        else:
+            n = min(int(amount), remaining)
+        if n <= 1:
+            return opt
+        return Option(opt.kind, opt.id, F.bulk_cost(it.base_cost, it.cost_growth, level, n), opt.tier, n)
 
     def gain(
         self,

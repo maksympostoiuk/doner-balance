@@ -372,9 +372,10 @@ def render(d: ReportData, config_label: str, export_path: Path | None) -> str:
     w("Calendar time since install (play time in brackets). Strategies:\n")
     for n, s in cfg.strategies.items():
         p = cfg.profiles[s.profile]
+        buys = "" if s.buy_amount == 1 else f", buys {'max' if s.buy_amount == 'max' else f'x{s.buy_amount}'} per click"
         w(
             f"- `{n}` — {s.description} Profile `{s.profile}`: {p.sessions_per_day}×{p.session_minutes:g} min/day, "
-            f"{p.taps_per_second * p.tapping_share:g} taps/s on average, {p.event_response} NPC answers."
+            f"{p.taps_per_second * p.tapping_share:g} taps/s on average, {p.event_response} NPC answers{buys}."
         )
     w("")
     order = list(dict.fromkeys(d.milestones["milestone"]))

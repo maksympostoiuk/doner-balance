@@ -173,3 +173,8 @@ in `pacing.targets`; change it and re-run `tune --apply`.
   the regular plan with drift, variable length, 1 in 5 sessions and 1 in 10 days missed — reaches
   the franchise on day ~7.4–8.7 vs 6.2 for the clockwork player. The tuning helper's play-time
   mapping uses the same draws, so it stays exact for irregular reference players.
+- **Open item done — bulk buy**: strategies take `buy_amount: 1 | 10 | 100 | max` (x10/x100 wait
+  for the whole bundle, `max` buys what the cash allows, bundles respect `max_level`, tiers and
+  managers are single). New `buy_max` strategy: reaches every milestone within hours of the
+  one-level best-ROI player, so a "buy max" button does not hurt progression. Export/GDScript gained
+  `max_affordable` with `test_vectors.bulk`; purchase logs have a `count` column.

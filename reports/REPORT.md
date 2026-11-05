@@ -33,6 +33,7 @@ Calendar time since install (play time in brackets). Strategies:
 - `cheapest` — Always buys the cheapest item that increases income. Profile `regular`: 3×10 min/day, 2.5 taps/s on average, smart NPC answers.
 - `saver` — Saves for the next tier whenever it is within reach, otherwise best ROI. Profile `regular`: 3×10 min/day, 2.5 taps/s on average, smart NPC answers.
 - `casual` — Best ROI, but only 2 short sessions per day, little tapping, default event answers. Profile `casual`: 2×5 min/day, 0.9 taps/s on average, default NPC answers.
+- `buy_max` — Best ROI, but always presses "buy max" on the chosen item (typical UI habit). Profile `regular`: 3×10 min/day, 2.5 taps/s on average, smart NPC answers, buys max per click.
 - `irregular` — Best ROI with the regular plan, but sessions drift, vary in length and are sometimes missed. Profile `irregular`: 3×10 min/day, 2.5 taps/s on average, smart NPC answers.
 
 | strategy | first_upgrade | first_manager | cafe | restaurant | franchise | first_prestige |
@@ -41,6 +42,7 @@ Calendar time since install (play time in brackets). Strategies:
 | cheapest | 4 s (4 s) | 6.8 min (6.8 min) | 5.0 h (10.0 min) | 2.0 d (1.0 h) | — | — |
 | saver | 4 s (4 s) | 1.8 min (1.8 min) | 5.8 min (5.8 min) | 10.0 h (20.0 min) | 6.2 d (3.2 h) | 12.4 d (6.3 h) |
 | casual | 12 s (12 s) | 4.0 min (4.0 min) | 6.6 h (8.4 min) | 2.0 d (20.0 min) | 11.0 d (1.8 h) | 20.0 d (3.3 h) |
+| buy_max | 4 s (4 s) | 1.8 min (1.8 min) | 8.5 min (8.5 min) | 24.0 h (31.8 min) | 6.2 d (3.2 h) | 12.2 d (6.2 h) |
 | irregular | 4 s (4 s) | 1.7 min (1.7 min) | 8.6 min (8.6 min) | 23.9 h (33.9 min) | 7.4 d (3.8 h) | 14.2 d (6.6 h) |
 
 Spread over 5 seeds (`simulation.seed` + `extra_seeds`): median, and 10th–90th percentile in brackets; a percentage means only that share of seeds reached the milestone.
@@ -51,6 +53,7 @@ Spread over 5 seeds (`simulation.seed` + `extra_seeds`): median, and 10th–90th
 | cheapest | 4 s | 6.8 min | 5.0 h | 2.0 d | — | — |
 | saver | 4 s | 1.8 min | 5.8 min | 10.0 h | 6.2 d | 13.0 d (12.4 d–13.0 d) |
 | casual | 12 s | 4.0 min | 6.6 h | 2.0 d | 10.3 d (10.1 d–11.0 d) | 20.0 d (19.4 d–20.0 d) |
+| buy_max | 4 s | 1.8 min | 8.5 min | 24.1 h (24.0 h–24.1 h) | 6.4 d (6.3 d–7.0 d) | 13.0 d (12.5 d–13.1 d) |
 | irregular | 4 s | 1.7 min | 8.6 min | 23.9 h (22.5 h–24.7 h) | 8.0 d (7.6 d–8.7 d) | 14.4 d (14.3 d–17.3 d) |
 
 ![Dot chart: calendar time for each strategy to reach each milestone, log scale, with target bands](milestones.png)
@@ -79,6 +82,7 @@ A *dead zone* is a stretch of **play time** longer than `analysis.dead_zone_thre
 | cheapest | 48 | 558 | 89% | 40 | 15.4 |
 | saver | 49 | 505 | 80% | 40 | 5.0 |
 | casual | 15 | 95 | 45% | 15 | 9.3 |
+| buy_max | 46 | 454 | 72% | 40 | 5.0 |
 | irregular | 34 | 381 | 77% | 29 | 8.5 |
 
 Longest dead zones for `best_roi`:
@@ -114,6 +118,7 @@ Share of coins earned from day 2 on:
 | cheapest | 2.6% | 6.9% | 90.5% | 27% | 2.87B |
 | saver | 2.9% | 7.6% | 89.5% | 27% | 47.7T |
 | casual | 0.3% | 2.1% | 97.6% | 12% | 17.8K |
+| buy_max | 2.9% | 7.6% | 89.5% | 27% | 28.7T |
 | irregular | 1.4% | 3.7% | 94.8% | 27% | 5.3B |
 
 ## 5. NPC events
@@ -142,16 +147,16 @@ Ablation study over 5 seeds: each event type is switched off on its own and the 
 
 Answers chosen (main runs):
 
-| event | response | best_roi | casual | cheapest | irregular | saver |
-|---|---|---|---|---|---|---|
-| inspection | pay_fine | 11 | 13 | 14 | 12 | 11 |
-| inspection | renovate | 3 | 0 | 0 | 2 | 3 |
-| mafia | pay | 6 | 8 | 6 | 5 | 6 |
-| mafia | police | 3 | 0 | 2 | 4 | 2 |
-| rival_burger | ignore | 0 | 6 | 0 | 0 | 0 |
-| rival_burger | promo | 6 | 0 | 6 | 3 | 6 |
-| supplier_deal | accept | 29 | 27 | 28 | 24 | 29 |
-| supplier_deal | decline | 0 | 0 | 1 | 1 | 0 |
+| event | response | best_roi | buy_max | casual | cheapest | irregular | saver |
+|---|---|---|---|---|---|---|---|
+| inspection | pay_fine | 11 | 11 | 13 | 14 | 12 | 11 |
+| inspection | renovate | 3 | 3 | 0 | 0 | 2 | 3 |
+| mafia | pay | 6 | 7 | 8 | 6 | 5 | 6 |
+| mafia | police | 3 | 1 | 0 | 2 | 4 | 2 |
+| rival_burger | ignore | 0 | 0 | 6 | 0 | 0 | 0 |
+| rival_burger | promo | 6 | 6 | 0 | 6 | 3 | 6 |
+| supplier_deal | accept | 29 | 29 | 27 | 28 | 24 | 29 |
+| supplier_deal | decline | 0 | 0 | 0 | 1 | 1 | 0 |
 
 ## 6. Prestige runs
 
@@ -166,6 +171,8 @@ Hours after the start of each run (a run starts at install or at a prestige rese
 | saver | 2 | 12.4 d | 2.6 min | 14.0 h | 3.8 d | — | 0 |
 | casual | 1 | 0 s | 6.6 h | 2.0 d | 11.0 d | 20.0 d | 58 |
 | casual | 2 | 20.0 d | 6.5 h | — | — | — | 0 |
+| buy_max | 1 | 0 s | 8.5 min | 24.0 h | 6.2 d | 12.2 d | 50 |
+| buy_max | 2 | 12.2 d | 4.3 min | 19.0 h | 4.2 d | — | 0 |
 | irregular | 1 | 0 s | 8.6 min | 23.9 h | 7.4 d | 14.2 d | 52 |
 | irregular | 2 | 14.2 d | 4.2 min | 5.7 h | — | — | 0 |
 
@@ -223,7 +230,7 @@ Sorted by severity (0–100). Rules live in `doner_balance/recommend.py`; thresh
 
 **Dead zones.** 77% of play time passes without +5% progress; the longest wait is 40 min of play.
 
-**Other players.** Time to franchise: `best_roi` 6.2 d, `cheapest` never, `saver` 6.2 d, `casual` 11.0 d, `irregular` 7.4 d.
+**Other players.** Time to franchise: `best_roi` 6.2 d, `cheapest` never, `saver` 6.2 d, `casual` 11.0 d, `buy_max` 6.2 d, `irregular` 7.4 d.
 
 **NPCs.** All events together shift `best_roi` by +3.0 h by hour 168; the strongest single NPC is `supplier_deal` (-8.7 h).
 
@@ -247,4 +254,4 @@ Sorted by severity (0–100). Rules live in `doner_balance/recommend.py`; thresh
 | `recommendations.csv` | the findings above as a table |
 | `export/economy.json` | Godot export of this config (see `docs/GODOT_EXPORT.md`) |
 
-_Generated in 31 s._
+_Generated in 35 s._

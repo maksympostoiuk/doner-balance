@@ -461,6 +461,11 @@ strategies:
     policy: best_roi
     profile: casual
     description: Best ROI, but only 2 short sessions per day, little tapping, default event answers.
+  buy_max:
+    policy: best_roi
+    profile: regular
+    buy_amount: max              # 1, 10, 100 or max: levels bought per click
+    description: Best ROI, but always presses "buy max" on the chosen item (typical UI habit).
   irregular:
     policy: best_roi
     profile: irregular

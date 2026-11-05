@@ -21,6 +21,12 @@ casual,inspection,pay_fine,13
 casual,mafia,pay,8
 casual,rival_burger,ignore,6
 casual,supplier_deal,accept,27
+buy_max,inspection,pay_fine,11
+buy_max,inspection,renovate,3
+buy_max,mafia,pay,7
+buy_max,mafia,police,1
+buy_max,rival_burger,promo,6
+buy_max,supplier_deal,accept,29
 irregular,inspection,pay_fine,12
 irregular,inspection,renovate,2
 irregular,mafia,pay,5

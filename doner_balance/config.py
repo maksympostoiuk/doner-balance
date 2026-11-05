@@ -232,6 +232,8 @@ class SessionProfile(_Model):
 class StrategyConfig(_Model):
     policy: Literal["best_roi", "cheapest", "saver"]
     profile: str
+    # levels bought per click: 1, 10, 100 or "max" (as many as the cash allows)
+    buy_amount: Literal[1, 10, 100, "max"] = 1
     description: str = ""
 
 

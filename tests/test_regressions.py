@@ -342,3 +342,52 @@ def test_irregular_player_simulation_and_tuning_clock_agree(default_cfg):
     # the tuning helper's calendar->play-time mapping uses the same session draws
     for _, row in r.sessions.iterrows():
         assert active_hours_at(default_cfg, "irregular", row["end_h"]) == pytest.approx(row["active_h"], abs=1e-6)
+
+
+def test_bulk_buy_options(default_cfg):
+    from doner_balance.model import Option
+
+    econ = Economy(default_cfg)
+    st = econ.new_state()
+    knife = next(o for o in econ.options(st) if o.id == "knife")
+    st.cash = 0
+    assert econ.bulk(st, knife, "max") == knife  # nothing affordable: wait for one level
+    st.cash = F.bulk_cost(10, 1.18, 0, 7) + 1
+    order = econ.bulk(st, knife, "max")
+    assert order.count == 7 and order.cost == pytest.approx(F.bulk_cost(10, 1.18, 0, 7))
+    x10 = econ.bulk(st, knife, 10)
+    assert x10.count == 10 and x10.cost > st.cash  # x10 waits for the whole bundle
+    st.levels["knife"] = 45  # max_level 50 -> only 5 left
+    left = econ.bulk(st, Option("tap", "knife", F.level_cost(10, 1.18, 45), -1), 100)
+    assert left.count == 5
+    st.cash = left.cost
+    econ.apply(st, left)
+    assert st.level("knife") == 50
+    cafe = next(o for o in econ.options(econ.new_state()) if o.kind == "tier")
+    assert econ.bulk(st, cafe, "max") == cafe  # tiers are never bundled
+
+
+def test_buy_max_strategy_buys_bundles(default_cfg):
+    r = simulate(default_cfg, "buy_max", days=1)
+    assert (r.purchases["count"] > 1).any()
+    assert (r.purchases.loc[r.purchases["kind"].isin(["tier", "manager"]), "count"] == 1).all()
+    assert simulate(default_cfg, "buy_max", days=1).purchases.equals(r.purchases)
+
+
+def test_buy_amount_validation():
+    from pydantic import ValidationError
+
+    d = _default_dict()
+    d["strategies"]["best_roi"]["buy_amount"] = 7
+    with pytest.raises(ValidationError, match="buy_amount"):
+        config_from_dict(d)
+
+
+def test_bulk_test_vectors(default_cfg):
+    from doner_balance.export import build_export
+
+    for v in build_export(default_cfg)["test_vectors"]["bulk"]:
+        n = v["max_affordable"]
+        it = next(u for u in default_cfg.tap.upgrades if u.id == v["item"])
+        assert F.bulk_cost(it.base_cost, it.cost_growth, v["level"], n) <= v["cash"]
+        assert F.bulk_cost(it.base_cost, it.cost_growth, v["level"], n + 1) > v["cash"]

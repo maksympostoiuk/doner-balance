@@ -87,6 +87,18 @@ func bulk_cost(it: Dictionary, level: int, n: int) -> float:
 	return float(it.base_cost) * pow(g, level) * (pow(g, n) - 1.0) / (g - 1.0)
 
 
+## How many levels can be bought with `cash` starting at `level` ("buy max" button).
+func max_affordable(it: Dictionary, level: int, cash: float) -> int:
+	var first := level_cost(it, level)
+	if cash < first:
+		return 0
+	var g := float(it.cost_growth)
+	var n := int(floor(log(cash * (g - 1.0) / first + 1.0) / log(g)))
+	while n > 0 and bulk_cost(it, level, n) > cash * (1.0 + 1e-12):
+		n -= 1
+	return n
+
+
 func milestone_mult(level: int) -> float:
 	var m := 1.0
 	for ms in data.staff_milestones:
@@ -238,6 +250,14 @@ func self_test() -> bool:
 	for v in tv.staff_income:
 		if not _close(staff_income(item(v.item), int(v.level)), float(v.income)):
 			push_error("staff_income mismatch for %s L%d" % [v.item, v.level])
+			ok = false
+	for v in tv.bulk:
+		var it := item(v.item)
+		if max_affordable(it, int(v.level), float(v.cash)) != int(v.max_affordable):
+			push_error("max_affordable mismatch for %s" % v.item)
+			ok = false
+		if not _close(bulk_cost(it, int(v.level), 10), float(v.bulk_cost_10)):
+			push_error("bulk_cost mismatch for %s" % v.item)
 			ok = false
 	for v in tv.reputation:
 		if reputation_total(float(v.all_time_earnings)) != int(v.reputation_total):

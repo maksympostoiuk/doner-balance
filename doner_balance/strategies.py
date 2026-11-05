@@ -30,6 +30,7 @@ class Strategy:
         self.econ = econ
         self.name = name
         self.policy = scfg.policy
+        self.buy_amount = scfg.buy_amount
         self.profile: SessionProfile = econ.cfg.profiles[scfg.profile]
         self.params = params
         self.weights: ProfileWeights = profile_weights(self.profile)

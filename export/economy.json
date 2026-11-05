@@ -20,6 +20,7 @@
   "formulas": {
     "level_cost": "base_cost * pow(cost_growth, level)   # level = levels already owned",
     "bulk_cost": "base_cost * pow(cost_growth, level) * (pow(cost_growth, n) - 1) / (cost_growth - 1)",
+    "max_affordable": "floor(log(cash * (cost_growth - 1) / level_cost(level) + 1) / log(cost_growth)), then step down while bulk_cost > cash (float guard); 0 if cash < level_cost(level)",
     "milestone_mult": "product of mult for every staff_milestones entry with level >= entry.level",
     "staff_income": "level * income * milestone_mult(level)",
     "tier_income": "sum(staff_income) * (1 + sum(value*level of 'income' upgrades)) * (1 + sum(value*level of 'speed' upgrades)) * product(owned manager income_mult)",
@@ -1213,6 +1214,71 @@
       {
         "all_time_earnings": 7.7e+18,
         "reputation_total": 316
+      }
+    ],
+    "bulk": [
+      {
+        "item": "knife",
+        "level": 0,
+        "cash": 5.0,
+        "max_affordable": 0,
+        "bulk_cost_10": 235.21308632214257
+      },
+      {
+        "item": "knife",
+        "level": 0,
+        "cash": 250.0,
+        "max_affordable": 10,
+        "bulk_cost_10": 235.21308632214257
+      },
+      {
+        "item": "knife",
+        "level": 5,
+        "cash": 10000.0,
+        "max_affordable": 26,
+        "bulk_cost_10": 538.1105627343496
+      },
+      {
+        "item": "wrapping",
+        "level": 0,
+        "cash": 150.0,
+        "max_affordable": 0,
+        "bulk_cost_10": 54475.58138880003
+      },
+      {
+        "item": "wrapping",
+        "level": 0,
+        "cash": 7500.0,
+        "max_affordable": 5,
+        "bulk_cost_10": 54475.58138880003
+      },
+      {
+        "item": "wrapping",
+        "level": 5,
+        "cash": 300000.0,
+        "max_affordable": 8,
+        "bulk_cost_10": 571217.8723034238
+      },
+      {
+        "item": "showman",
+        "level": 0,
+        "cash": 10000.0,
+        "max_affordable": 0,
+        "bulk_cost_10": 590480000.0
+      },
+      {
+        "item": "showman",
+        "level": 0,
+        "cash": 500000.0,
+        "max_affordable": 3,
+        "bulk_cost_10": 590480000.0
+      },
+      {
+        "item": "showman",
+        "level": 5,
+        "cash": 20000000.0,
+        "max_affordable": 2,
+        "bulk_cost_10": 143486640000.0
       }
     ],
     "sample_state": {
