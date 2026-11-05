@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .config import EconomyConfig, Target, config_from_dict, expand_path, get_path, set_path
-from .sessions import session_schedule
+from .sessions import session_rng, session_schedule
 from .simulator import SimResult, simulate
 
 TIER_LEVER_FIELDS = (
@@ -80,12 +80,17 @@ def nice(x: float, digits: int = 2) -> float:
     return round(x, -math.floor(math.log10(abs(x))) + digits - 1)
 
 
-def active_hours_at(cfg: EconomyConfig, strategy: str, calendar_h: float) -> float:
-    """Play time accumulated by ``calendar_h`` hours after install for a strategy's profile."""
+def active_hours_at(cfg: EconomyConfig, strategy: str, calendar_h: float, seed: int | None = None) -> float:
+    """Play time accumulated by ``calendar_h`` hours after install for a strategy's profile.
+
+    Uses the same session draws as a simulation with ``seed`` (default: ``simulation.seed``),
+    so it is exact for irregular profiles too.
+    """
     prof = cfg.profiles[cfg.strategies[strategy].profile]
+    rng = session_rng(cfg.simulation.seed if seed is None else seed)
     t = calendar_h * 3600.0
     total = 0.0
-    for start, end in session_schedule(prof, calendar_h / 24.0 + 1):
+    for start, end in session_schedule(prof, calendar_h / 24.0 + 1, rng):
         if start >= t:
             break
         total += min(end, t) - start

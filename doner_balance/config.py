@@ -209,6 +209,11 @@ class SessionProfile(_Model):
     taps_per_second: float = Field(ge=0)
     tapping_share: float = Field(ge=0, le=1)
     event_response: Literal["smart", "default"] = "smart"
+    # real players are not clockwork (all 0 = perfectly regular schedule)
+    session_jitter_minutes: float = Field(default=0.0, ge=0, le=720)  # std dev of the start time
+    session_length_cv: float = Field(default=0.0, ge=0, le=2)  # relative std dev of the length
+    skip_session_chance: float = Field(default=0.0, ge=0, le=0.95)  # chance to miss one session
+    skip_day_chance: float = Field(default=0.0, ge=0, le=0.95)  # chance to miss a whole day
 
     @model_validator(mode="after")
     def _window(self) -> SessionProfile:

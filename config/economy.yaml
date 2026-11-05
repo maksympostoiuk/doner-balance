@@ -431,6 +431,18 @@ profiles:
     taps_per_second: 3
     tapping_share: 0.3
     event_response: default      # always clicks the default button
+  irregular:                     # the regular player, but human: late, short, sometimes absent
+    sessions_per_day: 3
+    session_minutes: 10
+    day_start_hour: 8
+    day_end_hour: 23
+    taps_per_second: 5
+    tapping_share: 0.5
+    event_response: smart
+    session_jitter_minutes: 60   # starts up to ~1-2 h earlier/later than planned
+    session_length_cv: 0.5       # 10 min on average, often 5 or 15
+    skip_session_chance: 0.2     # misses 1 session in 5
+    skip_day_chance: 0.1         # ... and 1 day in 10
 
 strategies:
   best_roi:
@@ -449,6 +461,10 @@ strategies:
     policy: best_roi
     profile: casual
     description: Best ROI, but only 2 short sessions per day, little tapping, default event answers.
+  irregular:
+    policy: best_roi
+    profile: irregular
+    description: Best ROI with the regular plan, but sessions drift, vary in length and are sometimes missed.
 
 strategy_params:
   saver_patience_hours: 2.0      # saver waits for the next tier if it is <= 2 real hours away

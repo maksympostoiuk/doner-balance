@@ -18,7 +18,7 @@ import pandas as pd
 from .config import EconomyConfig
 from .events import EventEngine, EventStats, expire_modifiers
 from .model import Economy, GameState, Option
-from .sessions import session_schedule
+from .sessions import session_rng, session_schedule
 from .strategies import Strategy, make_strategy
 
 
@@ -257,7 +257,7 @@ class Simulator:
     def run(self) -> SimResult:
         horizon = self.days * 86400.0
         self._record(active=True, force=True)
-        for start, end in session_schedule(self.profile, self.days):
+        for start, end in session_schedule(self.profile, self.days, session_rng(self.seed)):
             if self.stopped:
                 break
             if start > self.t:

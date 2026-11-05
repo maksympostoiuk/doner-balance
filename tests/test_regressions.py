@@ -197,10 +197,8 @@ def test_dotted_path_helpers_edge_cases():
     from doner_balance.config import expand_path, get_path, set_path
 
     d = _default_dict()
-    assert expand_path(d, "profiles.*.session_minutes") == [
-        "profiles.regular.session_minutes",
-        "profiles.casual.session_minutes",
-    ]
+    paths = expand_path(d, "profiles.*.session_minutes")
+    assert "profiles.regular.session_minutes" in paths and "profiles.casual.session_minutes" in paths
     set_path(d, "staff_milestones.0", {"level": 30, "mult": 2})
     assert d["staff_milestones"][0] == {"level": 30, "mult": 2}
     with pytest.raises(KeyError):
@@ -300,3 +298,47 @@ def test_milestone_spread_over_seeds(default_cfg):
     assert row["p10_h"] <= row["median_h"] <= row["p90_h"]
     never = sp[(sp["strategy"] == "casual") & (sp["milestone"] == "franchise")].iloc[0]
     assert never["reached"] == 0 and math.isnan(never["median_h"])
+
+
+def _irregular_profile(default_cfg, **kw):
+    prof = default_cfg.profiles["regular"].model_copy(update=kw)
+    return prof
+
+
+def test_session_variance_is_seeded_and_never_overlaps(default_cfg):
+    from doner_balance.sessions import session_rng, session_schedule
+
+    prof = _irregular_profile(
+        default_cfg, session_jitter_minutes=120, session_length_cv=1.0, skip_session_chance=0.3, skip_day_chance=0.2
+    )
+    a = session_schedule(prof, 30, session_rng(7))
+    b = session_schedule(prof, 30, session_rng(7))
+    c = session_schedule(prof, 30, session_rng(8))
+    assert a == b and a != c
+    assert a[0] == (0.0, prof.session_minutes * 60.0)  # the install session is fixed
+    for (s0, e0), (s1, e1) in itertools.pairwise(a):
+        assert s0 < e0 <= s1 < e1
+    nominal = len(session_schedule(prof, 30))
+    expected = nominal * (1 - 0.3) * (1 - 0.2)
+    assert abs(len(a) - expected) < 0.2 * nominal
+    # prefix property: a shorter horizon is a prefix of the longer one
+    short = session_schedule(prof, 10, session_rng(7))
+    assert a[: len(short) - 1] == short[:-1]
+
+
+def test_no_variance_means_nominal_schedule(default_cfg):
+    from doner_balance.sessions import session_rng, session_schedule
+
+    prof = default_cfg.profiles["regular"]
+    assert session_schedule(prof, 5, session_rng(1)) == session_schedule(prof, 5)
+
+
+def test_irregular_player_simulation_and_tuning_clock_agree(default_cfg):
+    from doner_balance.tuning import active_hours_at
+
+    r = simulate(default_cfg, "irregular", days=4)
+    again = simulate(default_cfg, "irregular", days=4)
+    pd.testing.assert_frame_equal(r.sessions, again.sessions)
+    # the tuning helper's calendar->play-time mapping uses the same session draws
+    for _, row in r.sessions.iterrows():
+        assert active_hours_at(default_cfg, "irregular", row["end_h"]) == pytest.approx(row["active_h"], abs=1e-6)

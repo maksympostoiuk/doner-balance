@@ -164,3 +164,12 @@ in `pacing.targets`; change it and re-run `tune --apply`.
   - quality gates: `scripts/check.sh` runs ruff (lint + format), mypy, gdlint, pytest and a wheel
     build; codebase formatted with ruff; mypy found loop variables reused with different types and
     a `None` multiplier that could reach `max()` in the NPC rule — fixed.
+- **Open item done — Monte Carlo milestones**: every strategy runs over all seeds
+  (`simulation.seed` + `extra_seeds`); REPORT.md shows median and 10th–90th percentile per
+  milestone, `reports/milestone_spread.csv`, and percentile bars in `milestones.png`.
+- **Open item done — irregular players**: profiles take `session_jitter_minutes`,
+  `session_length_cv`, `skip_session_chance`, `skip_day_chance` (own seeded RNG stream; the
+  install session is fixed; sessions never overlap). New `irregular` strategy in the default config:
+  the regular plan with drift, variable length, 1 in 5 sessions and 1 in 10 days missed — reaches
+  the franchise on day ~7.4–8.7 vs 6.2 for the clockwork player. The tuning helper's play-time
+  mapping uses the same draws, so it stays exact for irregular reference players.

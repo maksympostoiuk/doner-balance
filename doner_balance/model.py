@@ -123,7 +123,9 @@ def profile_weights(profile: SessionProfile) -> ProfileWeights:
             else 86400.0 + profile.day_start_hour * 3600.0
         )
         gaps.append(max(nxt - end, 0.0))
-    return ProfileWeights(active_fraction=active / 86400.0, offline_seconds_per_day=tuple(gaps))
+    # missed sessions/days: less play time on average (gaps are kept nominal: an approximation)
+    attendance = (1.0 - profile.skip_session_chance) * (1.0 - profile.skip_day_chance)
+    return ProfileWeights(active_fraction=attendance * active / 86400.0, offline_seconds_per_day=tuple(gaps))
 
 
 class Economy:

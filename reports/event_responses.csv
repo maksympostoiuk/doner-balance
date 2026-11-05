@@ -21,3 +21,10 @@ casual,inspection,pay_fine,13
 casual,mafia,pay,8
 casual,rival_burger,ignore,6
 casual,supplier_deal,accept,27
+irregular,inspection,pay_fine,12
+irregular,inspection,renovate,2
+irregular,mafia,pay,5
+irregular,mafia,police,4
+irregular,rival_burger,promo,3
+irregular,supplier_deal,accept,24
+irregular,supplier_deal,decline,1
