@@ -55,3 +55,11 @@ Plan and status for the Doner Lamar economy simulator. Updated after every miles
   casual gap, naive-buyer stall, NPC events, prestige loop), `report.py` (whole pipeline, CSVs,
   PNGs, REPORT.md), `cli.py` (`report`, `simulate`, `tune [--apply]`, `export`, `validate`;
   `--overrides` layering). `python -m doner_balance report` takes ~25 s (ablation runs in parallel).
+- **M8a (tests)** — 78 pytest tests: cost formulas (level/bulk/max-affordable, milestones,
+  reputation), income engine on a hand-computable tiny economy (staff, equipment, managers,
+  global/tier/reputation multipliers, tap value incl. income share), purchases & prestige reset,
+  NPC events (scaling costs, certain/impossible outcomes, cash floor, timed refresh, permanent
+  stacking, income accounting, eligibility, Poisson rate, smart vs default answers), offline
+  earnings (manager requirement, efficiency, cap, cap from managers, credit at next session),
+  determinism (same seed identical, different seed differs, independent event streams), dead-zone
+  logic, tuning levers, export test vectors and a CLI smoke test. Runs in ~4 s.
