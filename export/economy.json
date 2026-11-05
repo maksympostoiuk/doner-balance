@@ -1,6 +1,6 @@
 {
   "format": "doner-lamar-economy",
-  "format_version": 2,
+  "format_version": 3,
   "economy_name": "Doner Lamar",
   "economy_name_key": "GAME_NAME",
   "economy_version": "0.1.0",
@@ -24,11 +24,13 @@
     "milestone_mult": "product of mult for every staff_milestones entry with level >= entry.level",
     "staff_income": "level * income * milestone_mult(level)",
     "tier_income": "sum(staff_income) * (1 + sum(value*level of 'income' upgrades)) * (1 + sum(value*level of 'speed' upgrades)) * product(owned manager income_mult)",
-    "global_mult": "product(global_income_mult of owned tiers) * (1 + reputation * prestige.bonus_per_point) * product(active event income_mult)",
+    "global_mult": "product(global_income_mult of owned tiers) * (1 + reputation * prestige.bonus_per_point) * product(income_mult perks) * product(active event income_mult)",
+    "perks": "a perk is active while total reputation >= perk.reputation; start_cash, offline_cap_hours and offline_efficiency perks add, tap_mult and income_mult perks multiply",
+    "start_cash": "currency.start_cash + sum(start_cash perks)",
     "auto_income": "sum(tier_income of owned tiers) * global_mult",
-    "tap_value": "(tap.base_value + sum(value*level of 'flat' tap upgrades)) * (1 + sum(value*level of 'pct' tap upgrades)) * tap_mult(highest owned tier) * global_mult + sum(value*level of 'income_share' tap upgrades) * auto_income",
-    "offline_income": "sum(tier_income of tiers with an enables_offline manager) * global_mult * offline.efficiency * min(seconds_away, offline_cap_hours * 3600)",
-    "offline_cap_hours": "offline.cap_hours + sum(offline_cap_hours_add of owned managers)",
+    "tap_value": "(tap.base_value + sum(value*level of 'flat' tap upgrades)) * (1 + sum(value*level of 'pct' tap upgrades)) * tap_mult(highest owned tier) * product(tap_mult perks) * global_mult + sum(value*level of 'income_share' tap upgrades) * auto_income",
+    "offline_income": "sum(tier_income of tiers with an enables_offline manager) * global_mult * min(1, offline.efficiency + sum(offline_efficiency perks)) * min(seconds_away, offline_cap_hours * 3600)",
+    "offline_cap_hours": "offline.cap_hours + sum(offline_cap_hours perks) + sum(offline_cap_hours_add of owned managers)",
     "amount": "flat + cash_fraction * cash + income_seconds * (auto_income + tap income per second)",
     "reputation_total": "floor(prestige.scale * pow(all_time_earnings / prestige.base_requirement, prestige.exponent))",
     "reputation_gain": "reputation_total - reputation_already_owned (only with prestige.required_tier owned)",
@@ -416,7 +418,49 @@
     "scale": 10.0,
     "bonus_per_point": 0.02,
     "min_points": 10,
-    "currency_name_key": "PRESTIGE_CURRENCY_NAME"
+    "currency_name_key": "PRESTIGE_CURRENCY_NAME",
+    "perks": [
+      {
+        "id": "word_of_mouth",
+        "name": "Word of mouth",
+        "reputation": 10,
+        "effect": "start_cash",
+        "value": 30000.0,
+        "name_key": "PERK_WORD_OF_MOUTH_NAME"
+      },
+      {
+        "id": "night_regulars",
+        "name": "Night-shift regulars",
+        "reputation": 40,
+        "effect": "offline_cap_hours",
+        "value": 2.0,
+        "name_key": "PERK_NIGHT_REGULARS_NAME"
+      },
+      {
+        "id": "family_recipe",
+        "name": "Family recipe",
+        "reputation": 100,
+        "effect": "tap_mult",
+        "value": 2.0,
+        "name_key": "PERK_FAMILY_RECIPE_NAME"
+      },
+      {
+        "id": "city_legend",
+        "name": "City legend",
+        "reputation": 250,
+        "effect": "income_mult",
+        "value": 1.5,
+        "name_key": "PERK_CITY_LEGEND_NAME"
+      },
+      {
+        "id": "logistics_empire",
+        "name": "Logistics empire",
+        "reputation": 500,
+        "effect": "offline_efficiency",
+        "value": 0.1,
+        "name_key": "PERK_LOGISTICS_EMPIRE_NAME"
+      }
+    ]
   },
   "events": [
     {
@@ -1302,13 +1346,14 @@
         "aunt_zina",
         "rustam"
       ],
-      "reputation": 10,
+      "reputation": 500,
       "expected": {
-        "global_mult": 1.32,
-        "auto_income": 78227.17056,
-        "tap_value": 2365.2951168,
-        "offline_income_per_sec": 39113.58528,
-        "offline_cap_hours": 3.0
+        "global_mult": 18.150000000000002,
+        "auto_income": 1075623.5952,
+        "tap_value": 32776.907856,
+        "offline_income_per_sec": 645374.15712,
+        "offline_cap_hours": 5.0,
+        "start_cash_after_reset": 30000.0
       }
     }
   }

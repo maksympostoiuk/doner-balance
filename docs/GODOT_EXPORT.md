@@ -13,7 +13,7 @@ A ready-to-use GDScript implementation lives in [`godot/economy.gd`](../godot/ec
 | key | type | meaning |
 |-----|------|---------|
 | `format` | string | always `"doner-lamar-economy"` |
-| `format_version` | int | bumped on any breaking change (currently `2`) |
+| `format_version` | int | bumped on any breaking change (currently `3`) |
 | `economy_name`, `economy_version` | string | from the YAML (`name`, `version`) |
 | `economy_name_key` | string | translation key of the game name (`GAME_NAME`) |
 | `localization` | object | `{default_language, languages, csv}` — `csv` is the translation file next to the JSON |
@@ -52,7 +52,10 @@ Times are hours where the key ends in `_hours`, otherwise seconds.
   `income` (price) or `speed`; both multiply the tier's automated income.
 - `managers`: `[{id, name, cost, income_mult, enables_offline, offline_cap_hours_add}]` — one-time purchases.
 
-**prestige** `{enabled, currency_name, required_tier, base_requirement, exponent, scale, bonus_per_point, min_points}`
+**prestige** `{enabled, currency_name, currency_name_key, required_tier, base_requirement, exponent, scale, bonus_per_point, min_points, perks}`
+- `perks`: `[{id, name, name_key, reputation, effect, value}]` — active while **total** reputation
+  ≥ `reputation` (reputation is never spent). `effect`: `start_cash`, `offline_cap_hours`,
+  `offline_efficiency` (added; efficiency capped at 1) or `tap_mult`, `income_mult` (multiplied).
 - Selling the empire is allowed once `required_tier` is owned and the gain is ≥ `min_points`.
 - Reset: cash, tiers, levels and managers go back to a new game; reputation and all-time
   earnings are kept.
@@ -81,13 +84,15 @@ milestone_mult(L)   = product of mult over staff_milestones with L >= level
 staff_income(L)     = L * income * milestone_mult(L)
 tier_income         = sum(staff_income) * (1 + Σ income upgrades value*level)
                       * (1 + Σ speed upgrades value*level) * Π owned manager income_mult
-global_mult         = Π owned tiers global_income_mult * (1 + reputation*bonus_per_point) * Π event income_mult
+global_mult         = Π owned tiers global_income_mult * (1 + reputation*bonus_per_point)
+                      * Π income_mult perks * Π event income_mult
 auto_income         = Σ tier_income * global_mult
-tap_value           = (base_value + Σ flat) * (1 + Σ pct) * tap_mult(highest tier) * global_mult
+tap_value           = (base_value + Σ flat) * (1 + Σ pct) * tap_mult(highest tier) * Π tap_mult perks * global_mult
                       + Σ income_share * auto_income
-offline_cap_hours   = offline.cap_hours + Σ owned managers offline_cap_hours_add
+offline_cap_hours   = offline.cap_hours + Σ offline_cap_hours perks + Σ owned managers offline_cap_hours_add
 offline_earnings    = Σ tier_income of tiers with an offline manager * global_mult
-                      * efficiency * min(seconds_away, offline_cap_hours*3600)
+                      * min(1, efficiency + Σ offline_efficiency perks) * min(seconds_away, offline_cap_hours*3600)
+start_cash          = currency.start_cash + Σ start_cash perks   # after a reset too
 reputation_total    = floor(scale * (all_time_earnings / base_requirement) ^ exponent)
 ```
 
@@ -120,6 +125,9 @@ default language so a missing text shows the default-language name instead of th
 
 ## Changelog
 
+- **v3** — `prestige.perks` (reputation perks change income, tap value, offline rules and start
+  cash), `prestige.currency_name_key`; `test_vectors.sample_state` unlocks every perk and checks
+  `start_cash_after_reset`. GDScript: perk handling, `start_cash()`.
 - **v2** — `name_key` on every named object, `economy_name_key`, `prestige.currency_name_key`,
   top-level `localization`, `translations.csv` next to the JSON. GDScript: `display_name()`,
   `reputation_gain()`, `can_sell_empire()`, `max_affordable()`; `test_vectors.bulk`.

@@ -32,6 +32,8 @@ def name_keys(cfg: EconomyConfig) -> dict[tuple[str, str], str]:
     }
     for u in cfg.tap.upgrades:
         keys[("tap", u.id)] = make_key("TAP_UPGRADE", u.id, "NAME")
+    for pk in cfg.prestige.perks:
+        keys[("perk", pk.id)] = make_key("PERK", pk.id, "NAME")
     for t in cfg.tiers:
         keys[("tier", t.id)] = make_key("TIER", t.id, "NAME")
         for s in t.staff:
@@ -65,6 +67,8 @@ def source_texts(cfg: EconomyConfig) -> dict[str, str]:
     }
     for u in cfg.tap.upgrades:
         out[k[("tap", u.id)]] = u.name
+    for pk in cfg.prestige.perks:
+        out[k[("perk", pk.id)]] = pk.name
     for t in cfg.tiers:
         out[k[("tier", t.id)]] = t.name
         for s in t.staff:

@@ -301,6 +301,36 @@ prestige:
   scale: 10
   bonus_per_point: 0.02           # +2% global income per reputation point
   min_points: 10                  # the "sell" button needs at least 10 points
+  # Reputation perks: unlocked forever once TOTAL reputation reaches the threshold
+  # (reputation is never spent). The first sale (~50 reputation) unlocks the first two.
+  # effect: start_cash / offline_cap_hours / offline_efficiency are added,
+  #         tap_mult / income_mult multiply.
+  perks:
+    - id: word_of_mouth
+      name: Word of mouth
+      reputation: 10
+      effect: start_cash
+      value: 30000                # a new run can open the cafe right away
+    - id: night_regulars
+      name: Night-shift regulars
+      reputation: 40
+      effect: offline_cap_hours
+      value: 2                    # +2 h "while you were away" cap
+    - id: family_recipe
+      name: Family recipe
+      reputation: 100
+      effect: tap_mult
+      value: 2                    # hand-made shawarma worth x2
+    - id: city_legend
+      name: City legend
+      reputation: 250
+      effect: income_mult
+      value: 1.5                  # x1.5 all income on top of the reputation bonus
+    - id: logistics_empire
+      name: Logistics empire
+      reputation: 500
+      effect: offline_efficiency
+      value: 0.1                  # offline production 50% -> 60%
 
 # -----------------------------------------------------------------------------
 # NPC events

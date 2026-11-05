@@ -57,6 +57,7 @@ def tiny_dict() -> dict:
             "scale": 1,
             "bonus_per_point": 0.1,
             "min_points": 1,
+            "perks": [],  # keep the tiny economy hand-computable; perks have their own tests
         }
     )
     d["offline"] = {"efficiency": 0.5, "cap_hours": 2, "requires_manager": True}

@@ -570,6 +570,27 @@ def render(d: ReportData, config_label: str, export_path: Path | None) -> str:
     fmts: dict[str, Callable[[Any], str]] = {str(c): fmt_h for c in rr.columns if str(c).endswith("_h")}
     w(md_table(rr, fmts))
     w("")
+    if cfg.prestige.perks:
+        w("Reputation perks (unlocked forever once *total* reputation reaches the threshold):\n")
+        effect_txt = {
+            "start_cash": "start every run with +{v} coins",
+            "offline_cap_hours": "+{v} h offline cap",
+            "offline_efficiency": "+{v} offline efficiency",
+            "tap_mult": "taps x{v}",
+            "income_mult": "all income x{v}",
+        }
+        prows = []
+        for pk in sorted(cfg.prestige.perks, key=lambda p: p.reputation):
+            row: dict[str, Any] = {
+                "perk": pk.name,
+                "reputation": pk.reputation,
+                "effect": effect_txt[pk.effect].format(v=f"{pk.value:g}"),
+            }
+            for n, res in d.results.items():
+                row[n] = "✓" if res.final["reputation"] >= pk.reputation else "—"
+            prows.append(row)
+        w(md_table(pd.DataFrame(prows)))
+        w("\n✓ = unlocked by the end of the run.\n")
 
     # ---------------------------------------------------------------- all recommendations
     w("## 7. All findings and recommendations\n")

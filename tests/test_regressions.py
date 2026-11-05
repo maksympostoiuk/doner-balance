@@ -391,3 +391,53 @@ def test_bulk_test_vectors(default_cfg):
         it = next(u for u in default_cfg.tap.upgrades if u.id == v["item"])
         assert F.bulk_cost(it.base_cost, it.cost_growth, v["level"], n) <= v["cash"]
         assert F.bulk_cost(it.base_cost, it.cost_growth, v["level"], n + 1) > v["cash"]
+
+
+def test_reputation_perks(default_cfg):
+    econ = Economy(default_cfg)
+    perks = {pk.id: pk for pk in default_cfg.prestige.perks}
+    assert econ.perks(0) == []
+    assert [pk.id for pk in econ.perks(perks["night_regulars"].reputation)] == ["word_of_mouth", "night_regulars"]
+    rich = max(pk.reputation for pk in perks.values())
+    base, full = econ.new_state(), econ.new_state(reputation=rich)
+    assert full.cash == default_cfg.currency.start_cash + perks["word_of_mouth"].value
+    assert econ.offline_cap_hours(full) == econ.offline_cap_hours(base) + perks["night_regulars"].value
+    assert econ.offline_efficiency(full) == pytest.approx(
+        min(1.0, default_cfg.offline.efficiency + perks["logistics_empire"].value)
+    )
+    rep_only = F.reputation_multiplier(rich, default_cfg.prestige.bonus_per_point)
+    assert econ.global_mult(full) == pytest.approx(rep_only * perks["city_legend"].value)
+    tap_ratio = econ.tap_value(full) / econ.tap_value(base)
+    assert tap_ratio == pytest.approx(rep_only * perks["city_legend"].value * perks["family_recipe"].value)
+
+
+def test_perks_survive_prestige_and_respect_disabled_prestige(default_cfg):
+    econ = Economy(default_cfg)
+    st = econ.new_state()
+    st.tiers_owned = len(default_cfg.tiers)
+    st.lifetime_total = default_cfg.prestige.base_requirement * 100  # -> 100 reputation
+    new = econ.prestige(st)
+    assert new.reputation == 100 and new.cash == pytest.approx(30000)
+    cfg = default_cfg.model_copy(deep=True)
+    cfg.prestige.enabled = False
+    assert Economy(cfg).perks(10_000) == []
+
+
+def test_offline_efficiency_is_capped():
+    d = _default_dict()
+    d["prestige"]["perks"] = [{"id": "x", "name": "X", "reputation": 1, "effect": "offline_efficiency", "value": 0.9}]
+    econ = Economy(config_from_dict(d))
+    assert econ.offline_efficiency(econ.new_state(reputation=5)) == 1.0
+
+
+def test_perk_validation():
+    from pydantic import ValidationError
+
+    d = _default_dict()
+    d["prestige"]["perks"][0]["effect"] = "free_money"
+    with pytest.raises(ValidationError, match="effect"):
+        config_from_dict(d)
+    d = _default_dict()
+    d["prestige"]["perks"][0]["id"] = "knife"  # clashes with a tap upgrade
+    with pytest.raises(ValidationError, match="globally unique"):
+        config_from_dict(d)

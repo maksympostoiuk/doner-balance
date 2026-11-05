@@ -18,7 +18,7 @@ from .model import Economy
 TRANSLATIONS_FILE = "translations.csv"
 
 FORMAT = "doner-lamar-economy"
-FORMAT_VERSION = 2  # v2: name_key on every named object + "localization" section
+FORMAT_VERSION = 3  # v3: prestige.perks (changes income); v2: name_key + "localization"
 
 FORMULAS = {
     "level_cost": "base_cost * pow(cost_growth, level)   # level = levels already owned",
@@ -30,14 +30,19 @@ FORMULAS = {
     "tier_income": "sum(staff_income) * (1 + sum(value*level of 'income' upgrades))"
     " * (1 + sum(value*level of 'speed' upgrades)) * product(owned manager income_mult)",
     "global_mult": "product(global_income_mult of owned tiers) * (1 + reputation * prestige.bonus_per_point)"
-    " * product(active event income_mult)",
+    " * product(income_mult perks) * product(active event income_mult)",
+    "perks": "a perk is active while total reputation >= perk.reputation; start_cash, offline_cap_hours and "
+    "offline_efficiency perks add, tap_mult and income_mult perks multiply",
+    "start_cash": "currency.start_cash + sum(start_cash perks)",
     "auto_income": "sum(tier_income of owned tiers) * global_mult",
     "tap_value": "(tap.base_value + sum(value*level of 'flat' tap upgrades))"
-    " * (1 + sum(value*level of 'pct' tap upgrades)) * tap_mult(highest owned tier) * global_mult"
+    " * (1 + sum(value*level of 'pct' tap upgrades)) * tap_mult(highest owned tier) * product(tap_mult perks)"
+    " * global_mult"
     " + sum(value*level of 'income_share' tap upgrades) * auto_income",
     "offline_income": "sum(tier_income of tiers with an enables_offline manager) * global_mult"
-    " * offline.efficiency * min(seconds_away, offline_cap_hours * 3600)",
-    "offline_cap_hours": "offline.cap_hours + sum(offline_cap_hours_add of owned managers)",
+    " * min(1, offline.efficiency + sum(offline_efficiency perks)) * min(seconds_away, offline_cap_hours * 3600)",
+    "offline_cap_hours": "offline.cap_hours + sum(offline_cap_hours perks)"
+    " + sum(offline_cap_hours_add of owned managers)",
     "amount": "flat + cash_fraction * cash + income_seconds * (auto_income + tap income per second)",
     "reputation_total": "floor(prestige.scale * pow(all_time_earnings / prestige.base_requirement, prestige.exponent))",
     "reputation_gain": "reputation_total - reputation_already_owned (only with prestige.required_tier owned)",
@@ -98,7 +103,8 @@ def _test_vectors(cfg: EconomyConfig) -> dict[str, Any]:
     for u in cfg.tap.upgrades:
         levels[u.id] = 3 if (u.max_level is None or u.max_level >= 3) else u.max_level
     st.levels.update(levels)
-    st.reputation = 10
+    # enough reputation to unlock every perk, so the port is checked against perk effects too
+    st.reputation = max([10, *[pk.reputation for pk in cfg.prestige.perks]])
     auto = econ.auto_income(st)
     sample = {
         "tiers_owned": st.tiers_owned,
@@ -111,6 +117,7 @@ def _test_vectors(cfg: EconomyConfig) -> dict[str, Any]:
             "tap_value": econ.tap_value(st, auto),
             "offline_income_per_sec": econ.offline_rate(st),
             "offline_cap_hours": econ.offline_cap_hours(st),
+            "start_cash_after_reset": econ.new_state(reputation=st.reputation).cash,
         },
     }
     bulk = []
@@ -166,7 +173,11 @@ def build_export(cfg: EconomyConfig) -> dict[str, Any]:
             for i, t in enumerate(cfg.tiers)
         ],
         "offline": _item(cfg.offline),
-        "prestige": {**_item(cfg.prestige), "currency_name_key": k[("prestige", "")]},
+        "prestige": {
+            **_item(cfg.prestige, drop=("perks",)),
+            "currency_name_key": k[("prestige", "")],
+            "perks": [_item(pk, name_key=k[("perk", pk.id)]) for pk in cfg.prestige.perks],
+        },
         "events": [_event(e, k) for e in cfg.events if e.enabled],
         "test_vectors": _test_vectors(cfg),
     }

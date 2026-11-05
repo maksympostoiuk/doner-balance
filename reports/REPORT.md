@@ -5,7 +5,7 @@ Regenerate with `python -m doner_balance report`. All numbers below come from th
 
 ## What to tune first
 
-1. **Too much play time without meaningful progress** (dead zones) — 77% of all play time of `best_roi` is spent in stretches longer than 5 min before purchases add up to +5% income (47 dead zones, 487 min in total). 42 of them fit inside a single session (*idle sessions*): the offline earnings are spent in the first seconds of a 10-minute session and the rest of the session adds almost nothing.  
+1. **Too much play time without meaningful progress** (dead zones) — 83% of all play time of `best_roi` is spent in stretches longer than 5 min before purchases add up to +5% income (50 dead zones, 522 min in total). 46 of them fit inside a single session (*idle sessions*): the offline earnings are spent in the first seconds of a 10-minute session and the rest of the session adds almost nothing.  
    **Do:** Give the session itself something to do: raise active income relative to offline (lower `offline.efficiency` 0.5 → 0.35, or raise `tap.upgrades.showman.value` (0.01 → 0.02)), and/or add short in-session goals in the game design (NPC events while playing, timed boosts). In the economy, more mid-sized purchases per tier (a 4th staff type, more equipment levels) also break up the waits.
 
 2. **Long wait for `franchise`** (dead zones) — On day 5.0 (stage: restaurant (run 1)) the player waits **40 min of play** (≈ 4 sessions, 29.0 h calendar) until `franchise`; meanwhile only 1 small purchase (mostly `night_shift`).  
@@ -18,11 +18,11 @@ Regenerate with `python -m doner_balance report`. All numbers below come from th
 
 - **Milestones (`best_roi`):** first_upgrade 4 s, first_manager 1.8 min, cafe 8.5 min, restaurant 24.0 h, franchise 6.2 d, first_prestige 12.4 d (calendar time since install).
 - **Stage lengths (run 1):** kiosk 8.5 min (9 min play), cafe 23.9 h (21 min play), restaurant 5.2 d (160 min play), franchise 6.2 d (190 min play).
-- **Income while playing:** end of day 1 117K/s, end of day 3 34.4M/s, end of day 7 10.1B/s, end of day 14 10.1M/s (resets after each prestige).
-- **Where coins come from (day 2+):** taps 2.9%, automation while playing 7.7%, offline 89.4%.
-- **Dead zones:** 47 waits > 5 min of play, 77% of all play time, longest 40 min.
+- **Income while playing:** end of day 1 117K/s, end of day 3 34.4M/s, end of day 7 10.1B/s, end of day 14 14.1M/s (resets after each prestige).
+- **Where coins come from (day 2+):** taps 2.6%, automation while playing 7.0%, offline 90.4%.
+- **Dead zones:** 50 waits > 5 min of play, 83% of all play time, longest 40 min.
 - **Pacing targets met:** 5/5.
-- **Localization:** 52 player-facing texts in `en`; no other languages configured (`localization.languages`).
+- **Localization:** 57 player-facing texts in `en`; no other languages configured (`localization.languages`).
 - **Prestiges in 21 days:** 1, reputation 54 (x2.08 income).
 
 ## 1. Milestones per strategy
@@ -78,12 +78,12 @@ A *dead zone* is a stretch of **play time** longer than `analysis.dead_zone_thre
 
 | strategy | dead_zones | total_dead_min | share_of_play_pct | longest_min | longest_starts_day |
 |---|---|---|---|---|---|
-| best_roi | 47 | 487 | 77% | 40 | 5.0 |
+| best_roi | 50 | 522 | 83% | 40 | 5.0 |
 | cheapest | 48 | 558 | 89% | 40 | 15.4 |
-| saver | 49 | 505 | 80% | 40 | 5.0 |
+| saver | 50 | 509 | 81% | 40 | 5.0 |
 | casual | 15 | 95 | 45% | 15 | 9.3 |
-| buy_max | 46 | 454 | 72% | 40 | 5.0 |
-| irregular | 34 | 381 | 77% | 29 | 8.5 |
+| buy_max | 45 | 449 | 71% | 40 | 5.0 |
+| irregular | 37 | 394 | 80% | 29 | 8.5 |
 
 Longest dead zones for `best_roi`:
 
@@ -92,11 +92,11 @@ Longest dead zones for `best_roi`:
 | 5.0 | 40 min | 29.0 h | restaurant (run 1) | franchise | 1 | night_shift |
 | 9.0 | 30 min | 24.0 h | franchise (run 1) | marketing_dept | 0 |  |
 | 7.2 | 20 min | 19.0 h | franchise (run 1) | regional_director | 0 |  |
-| 15.4 | 20 min | 19.0 h | restaurant (run 2) | franchise | 0 |  |
-| 17.4 | 13 min | 18.9 h | franchise (run 2) | marketing_dept | 1 | franchisee |
-| 16.2 | 10 min | 5.0 h | restaurant (run 2) | franchisee | 0 |  |
+| 15.2 | 20 min | 19.0 h | restaurant (run 2) | franchise | 0 |  |
+| 20.2 | 10 min | 5.0 h | franchise (run 2) | regional_director | 2 | marketing_dept |
+| 17.2 | 10 min | 5.0 h | franchise (run 2) | regional_director | 0 |  |
 | 18.2 | 10 min | 5.0 h | franchise (run 2) | marketing_dept | 0 |  |
-| 19.2 | 10 min | 5.0 h | franchise (run 2) | marketing_dept | 0 |  |
+| 6.2 | 10 min | 5.0 h | restaurant (run 1) | coo | 0 |  |
 
 ![Scatter chart: each dead zone by the day it started and its length in minutes of play, per strategy](dead_zones.png)
 
@@ -114,12 +114,12 @@ Share of coins earned from day 2 on:
 
 | strategy | taps | automation (playing) | offline | taps share of active income | final active income/s |
 |---|---|---|---|---|---|
-| best_roi | 2.9% | 7.7% | 89.4% | 27% | 45.4T |
+| best_roi | 2.6% | 7.0% | 90.4% | 27% | 60.6T |
 | cheapest | 2.6% | 6.9% | 90.5% | 27% | 2.87B |
-| saver | 2.9% | 7.6% | 89.5% | 27% | 47.7T |
-| casual | 0.3% | 2.1% | 97.6% | 12% | 17.8K |
-| buy_max | 2.9% | 7.6% | 89.5% | 27% | 28.7T |
-| irregular | 1.4% | 3.7% | 94.8% | 27% | 5.3B |
+| saver | 2.6% | 7.0% | 90.4% | 27% | 60.6T |
+| casual | 0.3% | 2.1% | 97.6% | 12% | 148K |
+| buy_max | 2.0% | 5.3% | 92.8% | 27% | 103K |
+| irregular | 1.4% | 3.7% | 94.8% | 27% | 17.5B |
 
 ## 5. NPC events
 
@@ -132,15 +132,15 @@ Ablation study over 5 seeds: each event type is switched off on its own and the 
 
 | strategy | event | fired/run | shift | delay % | franchise play | earnings | net |
 |---|---|---|---|---|---|---|---|
-| best_roi | supplier_deal | 26.4 | -8.7 h | -5.2% | -10 min | +37.0% | +5.5% |
-| best_roi | inspection | 14.0 | +0.3 h | +0.2% | +0 min | -1.8% | -1.3% |
-| best_roi | mafia | 8.0 | +5.4 h | +3.2% | +0 min | -27.0% | -1.1% |
-| best_roi | rival_burger | 5.6 | +0.4 h | +0.2% | +0 min | -2.3% | -1.7% |
+| best_roi | supplier_deal | 26.4 | -8.7 h | -5.2% | -10 min | +37.0% | +4.7% |
+| best_roi | inspection | 14.0 | +0.3 h | +0.2% | +0 min | -1.8% | +2.2% |
+| best_roi | mafia | 7.8 | +5.4 h | +3.2% | +0 min | -27.0% | -1.3% |
+| best_roi | rival_burger | 5.4 | +0.4 h | +0.2% | +0 min | -2.3% | -1.5% |
 | best_roi | all events | — | +3.0 h | +1.8% | +0 min | -16.5% | — |
 | casual | supplier_deal | 24.4 | -11.3 h | -6.7% | -10 min | +104.4% | +4.4% |
 | casual | inspection | 13.2 | +3.2 h | +1.9% | +0 min | -15.1% | -4.4% |
 | casual | mafia | 8.0 | +0.8 h | +0.5% | +0 min | -4.5% | -4.0% |
-| casual | rival_burger | 5.2 | +2.5 h | +1.5% | +0 min | -16.8% | -4.3% |
+| casual | rival_burger | 5.6 | +2.5 h | +1.5% | +0 min | -16.8% | -4.3% |
 | casual | all events | — | +1.7 h | +1.0% | +0 min | -10.2% | — |
 
 ![Bar chart: hours of progress each NPC event type costs or gains by the checkpoint, per strategy](event_impact.png)
@@ -149,10 +149,10 @@ Answers chosen (main runs):
 
 | event | response | best_roi | buy_max | casual | cheapest | irregular | saver |
 |---|---|---|---|---|---|---|---|
-| inspection | pay_fine | 11 | 11 | 13 | 14 | 12 | 11 |
-| inspection | renovate | 3 | 3 | 0 | 0 | 2 | 3 |
-| mafia | pay | 6 | 7 | 8 | 6 | 5 | 6 |
-| mafia | police | 3 | 1 | 0 | 2 | 4 | 2 |
+| inspection | pay_fine | 8 | 8 | 13 | 14 | 12 | 8 |
+| inspection | renovate | 6 | 6 | 0 | 0 | 2 | 6 |
+| mafia | pay | 5 | 7 | 8 | 6 | 3 | 6 |
+| mafia | police | 3 | 1 | 0 | 2 | 6 | 2 |
 | rival_burger | ignore | 0 | 0 | 6 | 0 | 0 | 0 |
 | rival_burger | promo | 6 | 6 | 0 | 6 | 3 | 6 |
 | supplier_deal | accept | 29 | 29 | 27 | 28 | 24 | 29 |
@@ -165,23 +165,36 @@ Hours after the start of each run (a run starts at install or at a prestige rese
 | strategy | run | start_h | cafe_after_h | restaurant_after_h | franchise_after_h | prestige_after_h | reputation_gained |
 |---|---|---|---|---|---|---|---|
 | best_roi | 1 | 0 s | 8.5 min | 24.0 h | 6.2 d | 12.4 d | 54 |
-| best_roi | 2 | 12.4 d | 4.1 min | 14.1 h | 3.8 d | — | 0 |
+| best_roi | 2 | 12.4 d | 2.4 min | 14.1 h | 3.6 d | — | 0 |
 | cheapest | 1 | 0 s | 5.0 h | 2.0 d | — | — | 0 |
 | saver | 1 | 0 s | 5.8 min | 10.0 h | 6.2 d | 12.4 d | 54 |
-| saver | 2 | 12.4 d | 2.6 min | 14.0 h | 3.8 d | — | 0 |
+| saver | 2 | 12.4 d | 0 s | 14.0 h | 3.6 d | — | 0 |
 | casual | 1 | 0 s | 6.6 h | 2.0 d | 11.0 d | 20.0 d | 58 |
-| casual | 2 | 20.0 d | 6.5 h | — | — | — | 0 |
+| casual | 2 | 20.0 d | 2.6 min | — | — | — | 0 |
 | buy_max | 1 | 0 s | 8.5 min | 24.0 h | 6.2 d | 12.2 d | 50 |
-| buy_max | 2 | 12.2 d | 4.3 min | 19.0 h | 4.2 d | — | 0 |
+| buy_max | 2 | 12.2 d | 3.0 min | 5.1 h | 3.8 d | 8.2 d | 100 |
+| buy_max | 3 | 20.4 d | 58 s | — | — | — | 0 |
 | irregular | 1 | 0 s | 8.6 min | 23.9 h | 7.4 d | 14.2 d | 52 |
-| irregular | 2 | 14.2 d | 4.2 min | 5.7 h | — | — | 0 |
+| irregular | 2 | 14.2 d | 2.5 min | 5.6 h | 6.3 d | — | 0 |
+
+Reputation perks (unlocked forever once *total* reputation reaches the threshold):
+
+| perk | reputation | effect | best_roi | cheapest | saver | casual | buy_max | irregular |
+|---|---|---|---|---|---|---|---|---|
+| Word of mouth | 10 | start every run with +30000 coins | ✓ | — | ✓ | ✓ | ✓ | ✓ |
+| Night-shift regulars | 40 | +2 h offline cap | ✓ | — | ✓ | ✓ | ✓ | ✓ |
+| Family recipe | 100 | taps x2 | — | — | — | — | ✓ | — |
+| City legend | 250 | all income x1.5 | — | — | — | — | — | — |
+| Logistics empire | 500 | +0.1 offline efficiency | — | — | — | — | — | — |
+
+✓ = unlocked by the end of the run.
 
 ## 7. All findings and recommendations
 
 Sorted by severity (0–100). Rules live in `doner_balance/recommend.py`; thresholds in `analysis:` of the config.
 
 - **[80] Too much play time without meaningful progress** (dead zones)  
-  77% of all play time of `best_roi` is spent in stretches longer than 5 min before purchases add up to +5% income (47 dead zones, 487 min in total). 42 of them fit inside a single session (*idle sessions*): the offline earnings are spent in the first seconds of a 10-minute session and the rest of the session adds almost nothing.  
+  83% of all play time of `best_roi` is spent in stretches longer than 5 min before purchases add up to +5% income (50 dead zones, 522 min in total). 46 of them fit inside a single session (*idle sessions*): the offline earnings are spent in the first seconds of a 10-minute session and the rest of the session adds almost nothing.  
   → Give the session itself something to do: raise active income relative to offline (lower `offline.efficiency` 0.5 → 0.35, or raise `tap.upgrades.showman.value` (0.01 → 0.02)), and/or add short in-session goals in the game design (NPC events while playing, timed boosts). In the economy, more mid-sized purchases per tier (a 4th staff type, more equipment levels) also break up the waits.
 - **[53] Long wait for `franchise`** (dead zones)  
   On day 5.0 (stage: restaurant (run 1)) the player waits **40 min of play** (≈ 4 sessions, 29.0 h calendar) until `franchise`; meanwhile only 1 small purchase (mostly `night_shift`).  
@@ -192,8 +205,8 @@ Sorted by severity (0–100). Rules live in `doner_balance/recommend.py`; thresh
 - **[49] Long wait for `regional_director`** (dead zones)  
   On day 7.2 (stage: franchise (run 1)) the player waits **20 min of play** (≈ 2 sessions, 19.0 h calendar) until `regional_director`; meanwhile only 0 small purchases.  
   → Reduce `cost_growth` of `regional_director` by 0.01, or add a cheaper intermediate upgrade in stage franchise (run 1).
-- **[44] Offline earnings dominate** (offline)  
-  From day 2 on, 89% of `best_roi`'s coins come from offline earnings; the 10-minute sessions add little beyond spending.  
+- **[45] Offline earnings dominate** (offline)  
+  From day 2 on, 90% of `best_roi`'s coins come from offline earnings; the 10-minute sessions add little beyond spending.  
   → Fine for a relaxed idle game. If sessions should matter more, lower `offline.efficiency` (0.5 → 0.35) or reduce manager `offline_cap_hours_add`, and re-run `tune` (pacing will slow down).
 - **[35] `cheapest` stalls before cafe** (strategies)  
   `cheapest` reaches `cafe` after 5.0 h vs 8.5 min for `best_roi` (same sessions, different buying).  
@@ -211,10 +224,10 @@ Sorted by severity (0–100). Rules live in `doner_balance/recommend.py`; thresh
   Effect on progress: +0.8 h by hour 168 (+0.5%).  
   → If the mafia should be a memorable NPC, raise stakes (rate 0.03/h or effect size); otherwise it is flavour.
 - **[10] Tap share is healthy** (taps)  
-  After day 1 taps make 27% of the income earned while playing (2.9% of all income incl. offline).  
+  After day 1 taps make 27% of the income earned while playing (2.6% of all income incl. offline).  
   → No change needed.
 - **[10] Prestige loop works** (prestige)  
-  Run 2 reaches franchise x1.6 faster than run 1 (x2.08 income from 54 reputation).  
+  Run 2 reaches franchise x1.7 faster than run 1 (x2.08 income from 54 reputation).  
   → No change needed.
 - **[8] `casual` pace is acceptable** (casual)  
   `casual` reaches `franchise` after 11.0 d vs 6.2 d (x1.8, warning above x3).  
@@ -226,9 +239,9 @@ Sorted by severity (0–100). Rules live in `doner_balance/recommend.py`; thresh
 
 **Shape.** The first run is kiosk → cafe → restaurant → franchise; the longest stage is **franchise** (6.2 d, 190 min of play).
 
-**Income.** From day 2 on, 89% of coins come from offline earnings, 8% from automation while playing and 3% from taps (taps are 27% of what is earned during a session).
+**Income.** From day 2 on, 90% of coins come from offline earnings, 7% from automation while playing and 3% from taps (taps are 27% of what is earned during a session).
 
-**Dead zones.** 77% of play time passes without +5% progress; the longest wait is 40 min of play.
+**Dead zones.** 83% of play time passes without +5% progress; the longest wait is 40 min of play.
 
 **Other players.** Time to franchise: `best_roi` 6.2 d, `cheapest` never, `saver` 6.2 d, `casual` 11.0 d, `buy_max` 6.2 d, `irregular` 7.4 d.
 
@@ -254,4 +267,4 @@ Sorted by severity (0–100). Rules live in `doner_balance/recommend.py`; thresh
 | `recommendations.csv` | the findings above as a table |
 | `export/economy.json` | Godot export of this config (see `docs/GODOT_EXPORT.md`) |
 
-_Generated in 35 s._
+_Generated in 41 s._

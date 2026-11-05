@@ -1,6 +1,6 @@
 ## Doner Lamar economy loader for Godot 4.x
 ##
-## Loads export/economy.json (format "doner-lamar-economy", format_version 2) and
+## Loads export/economy.json (format "doner-lamar-economy", format_version 3) and
 ## implements the same formulas as the Python simulator. Run `self_test()` once
 ## after loading: it checks the formulas against the test vectors in the file.
 ##
@@ -12,7 +12,7 @@ class_name DonerEconomy
 extends Node
 
 const FORMAT := "doner-lamar-economy"
-const SUPPORTED_VERSION := 2
+const SUPPORTED_VERSION := 3
 
 var data: Dictionary = {}
 var _items: Dictionary = {}  # id -> item dictionary
@@ -171,12 +171,40 @@ func tier_income(state: Dictionary, ti: int) -> float:
 	return base * inc * spd * mgr
 
 
+# ------------------------------------------------------------------ reputation perks
+# A perk is active while total reputation >= perk.reputation (reputation is never spent).
+
+
+func _perk_add(reputation: int, effect: String) -> float:
+	var total := 0.0
+	if data.prestige.enabled:
+		for pk in data.prestige.perks:
+			if reputation >= int(pk.reputation) and pk.effect == effect:
+				total += float(pk.value)
+	return total
+
+
+func _perk_mult(reputation: int, effect: String) -> float:
+	var m := 1.0
+	if data.prestige.enabled:
+		for pk in data.prestige.perks:
+			if reputation >= int(pk.reputation) and pk.effect == effect:
+				m *= float(pk.value)
+	return m
+
+
+## Cash a new run (or a fresh game) starts with.
+func start_cash(reputation: int) -> float:
+	return float(data.currency.start_cash) + _perk_add(reputation, "start_cash")
+
+
 func global_mult(state: Dictionary) -> float:
 	var m := 1.0
 	for ti in range(int(state.tiers_owned)):
 		m *= float(data.tiers[ti].global_income_mult)
 	if data.prestige.enabled:
 		m *= 1.0 + int(state.get("reputation", 0)) * float(data.prestige.bonus_per_point)
+		m *= _perk_mult(int(state.get("reputation", 0)), "income_mult")
 	return m * float(state.get("event_mult", 1.0))
 
 
@@ -201,6 +229,7 @@ func tap_value(state: Dictionary) -> float:
 			"income_share":
 				share += float(u.value) * lv
 	var tier_mult := float(data.tiers[int(state.tiers_owned) - 1].tap_mult)
+	tier_mult *= _perk_mult(int(state.get("reputation", 0)), "tap_mult")
 	return flat * pct * tier_mult * global_mult(state) + share * auto_income(state)
 
 
@@ -215,6 +244,7 @@ func _managed(state: Dictionary, ti: int) -> bool:
 
 func offline_cap_hours(state: Dictionary) -> float:
 	var cap := float(data.offline.cap_hours)
+	cap += _perk_add(int(state.get("reputation", 0)), "offline_cap_hours")
 	for mid in state.managers:
 		cap += float(item(mid).get("offline_cap_hours_add", 0.0))
 	return cap
@@ -225,7 +255,9 @@ func offline_income_per_sec(state: Dictionary) -> float:
 	for ti in range(int(state.tiers_owned)):
 		if _managed(state, ti):
 			total += tier_income(state, ti)
-	return total * global_mult(state) * float(data.offline.efficiency)
+	var eff := float(data.offline.efficiency)
+	eff = minf(1.0, eff + _perk_add(int(state.get("reputation", 0)), "offline_efficiency"))
+	return total * global_mult(state) * eff
 
 
 ## Coins to credit when the player returns after `seconds_away`.
@@ -265,6 +297,12 @@ func self_test() -> bool:
 			ok = false
 	var s: Dictionary = tv.sample_state
 	var e: Dictionary = s.expected
+	if not _close(offline_cap_hours(s), float(e.offline_cap_hours)):
+		push_error("offline_cap_hours mismatch")
+		ok = false
+	if not _close(start_cash(int(s.reputation)), float(e.start_cash_after_reset)):
+		push_error("start_cash mismatch")
+		ok = false
 	if not _close(auto_income(s), float(e.auto_income)):
 		push_error("auto_income mismatch")
 		ok = false

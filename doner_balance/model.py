@@ -6,12 +6,16 @@ Income formulas (all per second):
                      * (1 + sum income-upgrade bonuses) * (1 + sum speed-upgrade bonuses)
                      * product(manager income_mult)
     global_mult    = product(global_income_mult of unlocked tiers)
-                     * (1 + reputation * bonus_per_point)
+                     * (1 + reputation * bonus_per_point) * product(income_mult perks)
     auto_income    = sum_t tier_auto(t) * global_mult
-    tap_value      = (base + sum flat) * (1 + sum pct) * tap_mult(highest tier) * global_mult
+    tap_value      = (base + sum flat) * (1 + sum pct) * tap_mult(highest tier) * tap_mult perks
+                     * global_mult
                      + income_share * auto_income
     active_income  = auto_income + taps_per_sec * tap_value
-    offline_rate   = sum_{t with manager} tier_auto(t) * global_mult * efficiency
+    offline_rate   = sum_{t with manager} tier_auto(t) * global_mult
+                     * min(1, efficiency + offline_efficiency perks)
+
+Reputation perks unlock at total-reputation thresholds and are never lost.
 
 NPC event multipliers are applied on top of these by the simulator.
 """
@@ -22,7 +26,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from . import formulas as F
-from .config import EconomyConfig, Manager, SessionProfile, Staff, TapUpgrade, Tier, TierUpgrade
+from .config import EconomyConfig, Manager, Perk, SessionProfile, Staff, TapUpgrade, Tier, TierUpgrade
 
 OptionKind = Literal["tier", "staff", "upgrade", "manager", "tap"]
 
@@ -148,9 +152,29 @@ class Economy:
         self.milestones = cfg.staff_milestones
 
     # ------------------------------------------------------------------ state
+    # ------------------------------------------------------------------ reputation perks
+    def perks(self, reputation: int) -> list[Perk]:
+        """Perks unlocked at this total reputation (thresholds; reputation is never spent)."""
+        if not self.cfg.prestige.enabled:
+            return []
+        return [pk for pk in self.cfg.prestige.perks if reputation >= pk.reputation]
+
+    def perk_add(self, reputation: int, effect: str) -> float:
+        return sum(pk.value for pk in self.perks(reputation) if pk.effect == effect)
+
+    def perk_mult(self, reputation: int, effect: str) -> float:
+        m = 1.0
+        for pk in self.perks(reputation):
+            if pk.effect == effect:
+                m *= pk.value
+        return m
+
     def new_state(self, reputation: int = 0, lifetime_total: float = 0.0, prestiges: int = 0) -> GameState:
         st = GameState(
-            cash=self.cfg.currency.start_cash, reputation=reputation, lifetime_total=lifetime_total, prestiges=prestiges
+            cash=self.cfg.currency.start_cash + self.perk_add(reputation, "start_cash"),
+            reputation=reputation,
+            lifetime_total=lifetime_total,
+            prestiges=prestiges,
         )
         self._grant_free_levels(st, self.cfg.tiers[0])
         return st
@@ -191,6 +215,7 @@ class Economy:
             m *= self.cfg.tiers[ti].global_income_mult
         if self.cfg.prestige.enabled:
             m *= F.reputation_multiplier(st.reputation, self.cfg.prestige.bonus_per_point)
+            m *= self.perk_mult(st.reputation, "income_mult")
         return m
 
     def auto_income(self, st: GameState) -> float:
@@ -210,7 +235,7 @@ class Economy:
                 flat += u.value * lv
             elif u.kind == "pct":
                 pct += u.value * lv
-        tier_mult = self.cfg.tiers[st.tiers_owned - 1].tap_mult
+        tier_mult = self.cfg.tiers[st.tiers_owned - 1].tap_mult * self.perk_mult(st.reputation, "tap_mult")
         if auto is None:
             auto = self.auto_income(st)
         return flat * pct * tier_mult * self.global_mult(st) + self.income_share(st) * auto
@@ -232,10 +257,13 @@ class Economy:
     def offline_rate(self, st: GameState) -> float:
         """Coins/sec credited while offline (already includes efficiency)."""
         base = sum(self.tier_auto_income(st, ti) for ti in range(st.tiers_owned) if self.managed(st, ti))
-        return base * self.global_mult(st) * self.cfg.offline.efficiency
+        return base * self.global_mult(st) * self.offline_efficiency(st)
+
+    def offline_efficiency(self, st: GameState) -> float:
+        return min(1.0, self.cfg.offline.efficiency + self.perk_add(st.reputation, "offline_efficiency"))
 
     def offline_cap_hours(self, st: GameState) -> float:
-        cap = self.cfg.offline.cap_hours
+        cap = self.cfg.offline.cap_hours + self.perk_add(st.reputation, "offline_cap_hours")
         for mid in st.managers:
             cap += self.managers[mid][1].offline_cap_hours_add
         return cap

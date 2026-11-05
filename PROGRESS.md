@@ -178,3 +178,10 @@ in `pacing.targets`; change it and re-run `tune --apply`.
   managers are single). New `buy_max` strategy: reaches every milestone within hours of the
   one-level best-ROI player, so a "buy max" button does not hurt progression. Export/GDScript gained
   `max_affordable` with `test_vectors.bulk`; purchase logs have a `count` column.
+- **Open item partly done — reputation perks** (the "reputation shop" idea, as thresholds):
+  `prestige.perks` unlock forever at total-reputation thresholds (reputation is never spent):
+  start cash, offline cap, offline efficiency, tap multiplier, income multiplier. Defaults: the
+  first sale (~50 reputation) unlocks *Word of mouth* (start a run with the cafe price) and
+  *Night-shift regulars* (+2 h offline cap); run 2 opens the cafe within minutes. REPORT.md lists
+  which perks each player unlocked. Export **format v3** (`prestige.perks`; GDScript `start_cash()`
+  and perk handling, test vectors unlock every perk).

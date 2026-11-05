@@ -186,6 +186,17 @@ class OfflineConfig(_Model):
     requires_manager: bool = True
 
 
+class Perk(_Model):
+    """Permanent bonus unlocked once total reputation reaches ``reputation`` (never spent)."""
+
+    id: Ident
+    name: Name
+    reputation: int = Field(ge=1)
+    effect: Literal["start_cash", "offline_cap_hours", "offline_efficiency", "tap_mult", "income_mult"]
+    # start_cash / offline_cap_hours / offline_efficiency: added; tap_mult / income_mult: multiplied
+    value: float = Field(gt=0)
+
+
 class PrestigeConfig(_Model):
     enabled: bool = True
     currency_name: str = "reputation"
@@ -195,6 +206,7 @@ class PrestigeConfig(_Model):
     scale: float = Field(gt=0)
     bonus_per_point: float = Field(gt=0)
     min_points: int = Field(default=1, ge=1)
+    perks: list[Perk] = Field(default_factory=list)
 
 
 # --------------------------------------------------------------------------- simulation
@@ -360,6 +372,7 @@ class EconomyConfig(_Model):
             raise ValueError("tier unlock costs must be non-decreasing")
         all_ids: list[str] = list(tier_ids)
         all_ids += [u.id for u in self.tap.upgrades]
+        all_ids += [pk.id for pk in self.prestige.perks]
         for t in self.tiers:
             all_ids += [s.id for s in t.staff] + [u.id for u in t.upgrades] + [m.id for m in t.managers]
         dupes = {i for i in all_ids if all_ids.count(i) > 1}

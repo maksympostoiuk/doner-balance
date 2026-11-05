@@ -39,10 +39,10 @@ def test_every_named_object_has_a_unique_key(default_cfg):
 
 def test_export_carries_name_keys(default_cfg):
     d = build_export(default_cfg)
-    assert d["format_version"] == FORMAT_VERSION == 2
+    assert d["format_version"] == FORMAT_VERSION >= 3
     assert d["localization"]["csv"] == "translations.csv"
     texts = source_texts(default_cfg)
-    named = [d["currency"], *d["tap"]["upgrades"]]
+    named = [d["currency"], *d["tap"]["upgrades"], *d["prestige"]["perks"]]
     for t in d["tiers"]:
         named += [t, *t["staff"], *t["upgrades"], *t["managers"]]
     for e in d["events"]:
