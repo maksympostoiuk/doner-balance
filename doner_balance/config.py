@@ -231,7 +231,10 @@ class Target(_Model):
     hours: float = Field(gt=0)
     clock: Literal["calendar", "active"] = "calendar"
     tolerance: float = Field(default=0.3, gt=0)  # +-30% counts as on target
-    lever: str  # dotted path into the config the tuning helper scales
+    mode: Literal["around", "at_most"] = "around"  # at_most: faster is fine
+    # what the tuning helper scales: "tier:<id>" (every money value of a tier) or
+    # one or more dotted config paths (list items addressed by id, "*" = all items)
+    lever: str | list[str]
     description: str = ""
 
 
@@ -340,6 +343,29 @@ def _resolve_container(data: Any, key: str) -> Any:
             return data[int(key)]
         raise KeyError(f"no list item with id '{key}'")
     return data[key]
+
+
+def expand_path(data: dict[str, Any], path: str) -> list[str]:
+    """Expand ``*`` wildcards (all list items, by id) into concrete dotted paths."""
+    parts = path.split(".")
+    cur_nodes: list[tuple[str, Any]] = [("", data)]
+    for part in parts:
+        nxt: list[tuple[str, Any]] = []
+        for prefix, node in cur_nodes:
+            if part == "*":
+                items = node if isinstance(node, list) else list(node.values())
+                keys = [it["id"] if isinstance(it, dict) and "id" in it else str(i) for i, it in enumerate(items)]
+                for k in keys:
+                    nxt.append((f"{prefix}.{k}" if prefix else k, _resolve_container(node, k)))
+            else:
+                try:
+                    child = _resolve_container(node, part)
+                except (KeyError, IndexError):
+                    continue  # optional field missing on this item
+                nxt.append((f"{prefix}.{part}" if prefix else part, child))
+        cur_nodes = nxt
+    out = [p for p, _ in cur_nodes]
+    return out
 
 
 def get_path(data: dict[str, Any], path: str) -> Any:

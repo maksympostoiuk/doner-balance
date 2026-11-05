@@ -35,16 +35,15 @@ currency:
   start_cash: 0          # the guy starts with empty pockets
 
 # Reaching these levels on any staff item multiplies that item's output.
-# Classic AdCap-style doubling. They create "just 3 more levels!" goals and
-# keep long-lived items relevant (cost grows exponentially, so the doubling
-# is what keeps payback times from exploding).
+# They create "just 3 more levels!" goals. Keep them sparse: with cost growth
+# ~1.13 a x2 every 25 levels is what keeps marginal payback *rising* with level
+# (1.13^25 = 21x cost vs 2x income). Dense early milestones (e.g. level 10) make
+# payback fall with level and the economy explodes.
 staff_milestones:
-  - {level: 10,  mult: 2}   # early first taste of a milestone
   - {level: 25,  mult: 2}
   - {level: 50,  mult: 2}
-  - {level: 100, mult: 3}   # big one, a reason to grind a single item
-  - {level: 150, mult: 2}
-  - {level: 200, mult: 3}
+  - {level: 100, mult: 2}
+  - {level: 200, mult: 3}   # late "grind one item" reward
 
 # -----------------------------------------------------------------------------
 # Tapping: making shawarma by hand.
@@ -55,28 +54,35 @@ tap:
     - id: knife
       name: Sharper knife
       kind: flat         # +value coins per tap per level
-      value: 1           # doubles tap value at level 1 -> very noticeable
-      base_cost: 10           # ~4 seconds of tapping: first purchase almost instant
-      cost_growth: 1.18         # steep: hand-tapping must not outscale automation
+      value: 1           # level 1 doubles tap value -> very noticeable first buy
+      base_cost: 10      # ~4 s of tapping: the first purchase is almost instant
+      cost_growth: 1.18  # steep: hand-tapping must not outscale automation
       max_level: 50
     - id: wrapping
       name: Wrapping technique
       kind: pct          # +value (fraction) multiplier on tap value per level
       value: 0.25        # +25% per level, additive (level 4 = x2)
       base_cost: 300
-      cost_growth: 1.6          # few levels, each is an "event"
+      cost_growth: 1.6   # few levels, each one is an "event"
       max_level: 12
     - id: showman
       name: Street showman
       kind: income_share # each tap also earns value * automated income/sec
       value: 0.01        # +1% of automated income per tap per level
-      base_cost: 20000   # mid-kiosk/cafe purchase that keeps tapping relevant later
+      base_cost: 20000   # cafe-era purchase that keeps tapping relevant later
       cost_growth: 3.0   # very steep: 15 levels span the whole game
       max_level: 15
 
 # -----------------------------------------------------------------------------
 # Business tiers: kiosk -> cafe -> restaurant -> franchise
 # -----------------------------------------------------------------------------
+#  Base payback = base_cost / income of a staff item at level 0, in seconds of
+#  income. It deliberately grows per tier (kiosk ~1 min, cafe ~10 min,
+#  restaurant ~1 h, franchise ~7 h) so the economy slows down as it grows —
+#  this is the main pacing knob besides the tier unlock costs.
+#  Equipment: "income" upgrades raise the price of a tier's shawarma, "speed"
+#  upgrades its production speed; both multiply the tier's automated income.
+#  Managers cost ~1.5x the tier unlock so a new tier earns offline soon.
 tiers:
   # ---------------------------------------------------------------- KIOSK
   - id: kiosk
@@ -89,37 +95,37 @@ tiers:
       - id: nephew
         name: Nephew Arsen (helper)
         base_cost: 15           # ~6 s of tapping
-        cost_growth: 1.1          # cheap, long-lived first generator
-        income: 0.4          # coins/sec per level (~30 s payback at level 0)
+        cost_growth: 1.12
+        income: 0.4             # coins/sec per level -> base payback 37 s
       - id: grill_cook
         name: Grill cook
-        base_cost: 200          # ~12x nephew
-        cost_growth: 1.12
-        income: 3            # ~8x nephew
+        base_cost: 200
+        cost_growth: 1.13
+        income: 3               # base payback 67 s
       - id: cashier
         name: Cashier
         base_cost: 3000
         cost_growth: 1.14
-        income: 25
+        income: 25              # base payback 120 s
     upgrades:
       - id: garlic_sauce
         name: Secret garlic sauce
-        kind: income            # +value price of kiosk shawarma per level
-        value: 0.10             # +10% kiosk income per level
+        kind: income
+        value: 0.08             # +8% kiosk income per level (x1.8 at max)
         base_cost: 500
-        cost_growth: 1.35
+        cost_growth: 1.5
         max_level: 10
       - id: second_grill
         name: Second vertical grill
-        kind: speed             # +value kiosk production speed per level
-        value: 0.2
+        kind: speed
+        value: 0.10             # +10% kiosk speed per level (x1.6 at max)
         base_cost: 2000
-        cost_growth: 1.5
-        max_level: 5
+        cost_growth: 1.7
+        max_level: 6
     managers:
       - id: aunt_zina
         name: Aunt Zina runs the kiosk
-        cost: 2500         # first offline income, affordable in session 1
+        cost: 2500              # first offline income, affordable in session 1
         income_mult: 1.0
         enables_offline: true
         offline_cap_hours_add: 0
@@ -127,138 +133,138 @@ tiers:
   # ---------------------------------------------------------------- CAFE
   - id: cafe
     name: Shawarma cafe
-    unlock_cost: 6000         # target: inside the first 10-minute session
-    tap_mult: 2            # a cafe plate is worth 3 kiosk wraps
-    global_income_mult: 1.25         # "real place now": +50% to everything
+    unlock_cost: 30000          # tuned: ~8 min of play (end of the first session)
+    tap_mult: 2                 # a cafe plate is worth 2 kiosk wraps
+    global_income_mult: 1.1     # "real place now": +10% to everything
     free_staff_levels: {waiter: 1}
     staff:
       - id: waiter
         name: Waiter
-        base_cost: 4000
-        cost_growth: 1.11
-        income: 8
+        base_cost: 20000
+        cost_growth: 1.13
+        income: 40              # base payback 500 s
       - id: cafe_chef
         name: Cafe chef
-        base_cost: 60000
-        cost_growth: 1.13
-        income: 80
+        base_cost: 300000
+        cost_growth: 1.14
+        income: 300             # base payback 1000 s
       - id: courier
         name: Delivery courier
-        base_cost: 1000000
+        base_cost: 5000000
         cost_growth: 1.15
-        income: 900
+        income: 3000            # base payback 1670 s
     upgrades:
       - id: lamb_menu
         name: Lamb doner menu
         kind: income
-        value: 0.1
-        base_cost: 100000
-        cost_growth: 1.4
+        value: 0.08
+        base_cost: 500000
+        cost_growth: 1.5
         max_level: 10
       - id: rotisserie
         name: Rotisserie oven
         kind: speed
-        value: 0.15
-        base_cost: 400000
-        cost_growth: 1.5
-        max_level: 8
+        value: 0.10
+        base_cost: 2000000
+        cost_growth: 1.7
+        max_level: 6
     managers:
       - id: rustam
         name: Manager Rustam
-        cost: 250000
-        income_mult: 1.25        # a manager also optimises the floor (+25%)
+        cost: 45000             # 1.5x unlock
+        income_mult: 1.1        # a manager also optimises the floor (+10%)
         enables_offline: true
         offline_cap_hours_add: 1  # longer "while you were away" window
 
   # ---------------------------------------------------------------- RESTAURANT
   - id: restaurant
     name: Doner restaurant
-    unlock_cost: 10000000     # target: during day 1
+    unlock_cost: 30000000       # tuned: end of day 1
     tap_mult: 4
-    global_income_mult: 1.5          # proper restaurant brand doubles everything
+    global_income_mult: 1.25
     free_staff_levels: {sous_chef: 1}
     staff:
       - id: sous_chef
         name: Sous-chef
-        base_cost: 5000000
-        cost_growth: 1.11
-        income: 2500
+        base_cost: 15000000
+        cost_growth: 1.13
+        income: 4500            # base payback 3300 s
       - id: head_chef
         name: Head chef
-        base_cost: 80000000
-        cost_growth: 1.13
-        income: 25000
+        base_cost: 240000000
+        cost_growth: 1.14
+        income: 36000           # base payback 6700 s
       - id: catering
         name: Catering team
-        base_cost: 1200000000
+        base_cost: 3600000000
         cost_growth: 1.15
-        income: 250000
+        income: 300000          # base payback 12000 s
     upgrades:
       - id: interior
         name: Designer interior
         kind: income
-        value: 0.1
-        base_cost: 100000000
-        cost_growth: 1.4
+        value: 0.08
+        base_cost: 300000000
+        cost_growth: 1.5
         max_level: 10
       - id: tandoor
         name: Charcoal tandoor
         kind: speed
-        value: 0.15
-        base_cost: 400000000
-        cost_growth: 1.5
-        max_level: 8
+        value: 0.10
+        base_cost: 1200000000
+        cost_growth: 1.7
+        max_level: 6
     managers:
       - id: gm_lena
         name: General manager Lena
-        cost: 300000000
-        income_mult: 1.5
+        cost: 45000000          # 1.5x unlock
+        income_mult: 1.25
         enables_offline: true
         offline_cap_hours_add: 2
 
   # ---------------------------------------------------------------- FRANCHISE
   - id: franchise
     name: International franchise
-    unlock_cost: 50000000000  # target: about one week
+    unlock_cost: 7.0e+12        # tuned: about one week
     tap_mult: 8
-    global_income_mult: 2
+    global_income_mult: 1.5
     free_staff_levels: {franchisee: 1}
     staff:
       - id: franchisee
         name: Franchisee
-        base_cost: 25000000000
-        cost_growth: 1.11
-        income: 2500000
+        base_cost: 3.5e+12
+        cost_growth: 1.12
+        income: 1.4e+8          # base payback 25000 s
       - id: regional_director
         name: Regional director
-        base_cost: 400000000000
+        base_cost: 5.6e+13
         cost_growth: 1.13
-        income: 25000000
+        income: 1.1e+9          # base payback 51000 s
       - id: marketing_dept
         name: Marketing department
-        base_cost: 6000000000000
-        cost_growth: 1.15
-        income: 250000000
+        base_cost: 8.4e+14
+        cost_growth: 1.14
+        income: 8.4e+9          # base payback 100000 s
     upgrades:
       - id: tv_campaign
         name: TV campaign
         kind: income
-        value: 0.1
-        base_cost: 500000000000
-        cost_growth: 1.4
+        value: 0.08
+        base_cost: 7.0e+13
+        cost_growth: 1.5
         max_level: 10
       - id: central_kitchen
         name: Central kitchen logistics
         kind: speed
-        value: 0.15
-        base_cost: 2000000000000
-        cost_growth: 1.5
-        max_level: 8
+        value: 0.10
+        base_cost: 2.8e+14
+        cost_growth: 1.7
+        max_level: 6
     managers:
       - id: coo
         name: Chief operating officer
-        cost: 2000000000000
-        income_mult: 2.0
+        cost: 1.0e+13           # ~1.5x unlock
+        income_mult: 1.5
         enables_offline: true
         offline_cap_hours_add: 4
 
@@ -278,7 +284,7 @@ prestige:
   currency_name: reputation
   required_tier: franchise        # can only sell once you own a franchise
   # reputation = floor(scale * (all_time_earnings / base_requirement) ^ exponent)
-  base_requirement: 1.0e+12
+  base_requirement: 2.7e+12       # tuned: first prestige around two weeks
   exponent: 0.5                   # square root: diminishing returns (standard)
   scale: 10
   bonus_per_point: 0.02           # +2% global income per reputation point
@@ -450,7 +456,12 @@ simulation:
 # -----------------------------------------------------------------------------
 # Target pacing (assumptions — edit freely). Checked against reference_strategy.
 # clock: calendar = hours since install, active = hours of play time.
-# lever: dotted config path the tuning helper scales to move this milestone.
+#   Calendar targets are judged on the equivalent play time (time is quantized by
+#   sessions: "restaurant on day 1" = by the end of the last session of day 1).
+# tolerance: +-fraction that still counts as on target. mode: around | at_most.
+# lever: what the tuning helper scales to move this milestone:
+#   "tier:<id>" = every money value of that tier (unlock, staff costs+incomes,
+#   upgrade and manager costs), or a dotted path / list of paths into this file.
 # -----------------------------------------------------------------------------
 pacing:
   reference_strategy: best_roi
@@ -459,25 +470,26 @@ pacing:
       hours: 0.00833             # 30 s of play
       clock: active
       tolerance: 0.5
+      mode: at_most              # faster is fine
       lever: tap.upgrades.knife.base_cost
       description: first purchase within 30 seconds
     - milestone: cafe
-      hours: 0.1667              # 10 min of play = inside the first session
+      hours: 0.133               # ~8 min of play: the reward that ends session 1
       clock: active
-      tolerance: 0.3
-      lever: tiers.cafe.unlock_cost
+      tolerance: 0.25            # 6..10 min
+      lever: tier:cafe
       description: cafe within the first session
     - milestone: restaurant
       hours: 24
       clock: calendar
       tolerance: 0.3
-      lever: tiers.restaurant.unlock_cost
+      lever: tier:restaurant
       description: restaurant on day 1
     - milestone: franchise
       hours: 168
       clock: calendar
       tolerance: 0.3
-      lever: tiers.franchise.unlock_cost
+      lever: tier:franchise
       description: franchise in about a week
     - milestone: first_prestige
       hours: 336

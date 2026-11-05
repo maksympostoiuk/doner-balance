@@ -45,8 +45,11 @@ class SimResult:
 
 class Simulator:
     def __init__(self, cfg: EconomyConfig, strategy: str, seed: int | None = None,
-                 disabled_events: tuple[str, ...] | list[str] = (), days: float | None = None):
+                 disabled_events: tuple[str, ...] | list[str] = (), days: float | None = None,
+                 stop_when: str | None = None):
         self.cfg = cfg
+        self.stop_when = stop_when  # end the run as soon as this milestone is reached
+        self.stopped = False
         self.econ = Economy(cfg)
         self.strategy: Strategy = make_strategy(self.econ, strategy)
         self.profile = self.strategy.profile
@@ -77,6 +80,8 @@ class Simulator:
     def _mark(self, name: str) -> None:
         if name not in self.milestones:
             self.milestones[name] = (self.t / 3600.0, self.active_t / 3600.0)
+            if name == self.stop_when:
+                self.stopped = True
 
     def _record(self, active: bool, force: bool = False) -> None:
         if not force and self.t < self._next_record:
@@ -144,6 +149,8 @@ class Simulator:
 
     def _shop(self) -> None:
         for _ in range(self.cfg.simulation.max_purchases_per_tick):
+            if self.stopped:
+                return
             if self.strategy.should_prestige(self.st):
                 self._prestige()
                 continue
@@ -186,7 +193,7 @@ class Simulator:
         dt0 = self.cfg.simulation.dt_active_seconds
         replan_every = 60.0
         next_replan = self.t + replan_every
-        while self.t < until:
+        while self.t < until and not self.stopped:
             dt = min(dt0, until - self.t)
             if expire_modifiers(self.st, self.t):
                 self.emult = self.st.event_mult()
@@ -210,6 +217,8 @@ class Simulator:
         horizon = self.days * 86400.0
         self._record(active=True, force=True)
         for start, end in session_schedule(self.profile, self.days):
+            if self.stopped:
+                break
             if start > self.t:
                 credited = self._offline(start)
                 self.st.earn(credited)
@@ -219,7 +228,7 @@ class Simulator:
             self.target = None
             self._shop()
             self._active(end)
-        if self.t < horizon:
+        if self.t < horizon and not self.stopped:
             self._offline(horizon)  # trailing offline time is never collected
         self._record(active=False, force=True)
         return self._result()
@@ -248,5 +257,6 @@ class Simulator:
 
 
 def simulate(cfg: EconomyConfig, strategy: str, seed: int | None = None,
-             disabled_events: tuple[str, ...] | list[str] = (), days: float | None = None) -> SimResult:
-    return Simulator(cfg, strategy, seed, disabled_events, days).run()
+             disabled_events: tuple[str, ...] | list[str] = (), days: float | None = None,
+             stop_when: str | None = None) -> SimResult:
+    return Simulator(cfg, strategy, seed, disabled_events, days, stop_when).run()

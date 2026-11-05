@@ -11,7 +11,7 @@ Plan and status for the Doner Lamar economy simulator. Updated after every miles
 | M2 | Simulator: time-step loop, session model, tapping, offline earnings, NPC events (seeded) | done |
 | M3 | Player strategies: best ROI, cheapest first, saver, casual | done |
 | M4 | Analysis: milestones, dead zones, income/s, tap vs automation share, event impact; charts + CSV | todo |
-| M5 | Target pacing in config + tuning helper (distance to targets, suggested parameter changes) | todo |
+| M5 | Target pacing in config + tuning helper (distance to targets, suggested parameter changes) | done |
 | M6 | Godot JSON export + format docs + GDScript example | todo |
 | M7 | REPORT.md generator with concrete recommendations; one CLI command for everything | todo |
 | M8 | Tests (formulas, income, events, offline, determinism), README, final balance pass + summary | todo |
@@ -34,3 +34,9 @@ Plan and status for the Doner Lamar economy simulator. Updated after every miles
   milestone doublings + cheap equipment multipliers made marginal payback *fall* with level.
   Fixed by sparser milestones (25/50/100/200), steeper growth (1.12-1.15) and pricier, smaller
   multipliers. Remaining pacing gap is handled by the tuning helper (M5).
+- **M5** (done before M4 so the default config could be calibrated with it) — `tuning.py`:
+  target checks (calendar targets judged on the equivalent play time), elasticity-based
+  suggestions per lever, sequential log-log secant `auto_tune`, `tier:<id>` levers that scale a
+  whole tier, overrides. `simulate(..., stop_when=milestone)` for fast measurements.
+  Default config rewritten with tuned, rounded numbers; managers now cost ~1.5x their tier unlock
+  (they used to cost up to 40x, leaving new tiers without offline income for days).
