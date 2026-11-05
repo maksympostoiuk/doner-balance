@@ -6,9 +6,9 @@ Regenerate with `python -m doner_balance report`. All numbers below come from th
 ## What to tune first
 
 1. **Too much play time without meaningful progress** (dead zones) — 77% of all play time of `best_roi` is spent in stretches longer than 5 min before purchases add up to +5% income (47 dead zones, 487 min in total). 42 of them fit inside a single session (*idle sessions*): the offline earnings are spent in the first seconds of a 10-minute session and the rest of the session adds almost nothing.  
-   **Do:** Give the session itself something to do: raise active income relative to offline (lower `offline.efficiency` 0.5 → 0.35, or raise `tap.upgrades.showman.value`), and/or add short in-session goals in the game design (NPC events while playing, timed boosts). In the economy, more mid-sized purchases per tier (a 4th staff type, more equipment levels) also break up the waits.
+   **Do:** Give the session itself something to do: raise active income relative to offline (lower `offline.efficiency` 0.5 → 0.35, or raise `tap.upgrades.showman.value` (0.01 → 0.02)), and/or add short in-session goals in the game design (NPC events while playing, timed boosts). In the economy, more mid-sized purchases per tier (a 4th staff type, more equipment levels) also break up the waits.
 
-2. **Long wait for `franchise`** (dead zones) — On day 5.0 (stage: restaurant (run 1)) the player waits **40 min of play** (≈ 4 sessions, 29.0 h calendar) until `franchise`; meanwhile only 1 small purchases (mostly `night_shift`).  
+2. **Long wait for `franchise`** (dead zones) — On day 5.0 (stage: restaurant (run 1)) the player waits **40 min of play** (≈ 4 sessions, 29.0 h calendar) until `franchise`; meanwhile only 1 small purchase (mostly `night_shift`).  
    **Do:** Wall before **franchise**. Keep the pacing target and fill the gap with content in the `restaurant` tier: e.g. a 4th staff item with `base_cost` ≈ 12T and `income` ≈ 380M (base payback ~1.6x the last staff), or more levels on `interior` (`max_level` +5). Lowering `tiers.franchise.unlock_cost` also helps but moves the franchise milestone earlier.
 
 3. **Long wait for `marketing_dept`** (dead zones) — On day 9.0 (stage: franchise (run 1)) the player waits **30 min of play** (≈ 3 sessions, 24.0 h calendar) until `marketing_dept`; meanwhile only 0 small purchases.  
@@ -18,10 +18,11 @@ Regenerate with `python -m doner_balance report`. All numbers below come from th
 
 - **Milestones (`best_roi`):** first_upgrade 4 s, first_manager 1.8 min, cafe 8.5 min, restaurant 24.0 h, franchise 6.2 d, first_prestige 12.4 d (calendar time since install).
 - **Stage lengths (run 1):** kiosk 8.5 min (9 min play), cafe 23.9 h (21 min play), restaurant 5.2 d (160 min play), franchise 6.2 d (190 min play).
-- **Income while playing:** end of day 1 117K/s, day 3 34.4M/s, day 7 10.1B/s, day 14 10.1M/s (resets after each prestige).
+- **Income while playing:** end of day 1 117K/s, end of day 3 34.4M/s, end of day 7 10.1B/s, end of day 14 10.1M/s (resets after each prestige).
 - **Where coins come from (day 2+):** taps 2.9%, automation while playing 7.7%, offline 89.4%.
 - **Dead zones:** 47 waits > 5 min of play, 77% of all play time, longest 40 min.
 - **Pacing targets met:** 5/5.
+- **Localization:** 52 player-facing texts in `en`; no other languages configured (`localization.languages`).
 - **Prestiges in 21 days:** 1, reputation 54 (x2.08 income).
 
 ## 1. Milestones per strategy
@@ -40,7 +41,7 @@ Calendar time since install (play time in brackets). Strategies:
 | saver | 4 s (4 s) | 1.8 min (1.8 min) | 5.8 min (5.8 min) | 10.0 h (20.0 min) | 6.2 d (3.2 h) | 12.4 d (6.3 h) |
 | casual | 12 s (12 s) | 4.0 min (4.0 min) | 6.6 h (8.4 min) | 2.0 d (20.0 min) | 11.0 d (1.8 h) | 20.0 d (3.3 h) |
 
-![milestones](milestones.png)
+![Dot chart: calendar time for each strategy to reach each milestone, log scale, with target bands](milestones.png)
 
 ## 2. Pacing vs targets
 
@@ -80,17 +81,17 @@ Longest dead zones for `best_roi`:
 | 18.2 | 10 min | 5.0 h | franchise (run 2) | marketing_dept | 0 |  |
 | 19.2 | 10 min | 5.0 h | franchise (run 2) | marketing_dept | 0 |  |
 
-![dead zones](dead_zones.png)
+![Scatter chart: each dead zone by the day it started and its length in minutes of play, per strategy](dead_zones.png)
 
-![payback](payback.png)
+![Small multiples: payback time in real hours of every purchase over the run, one panel per strategy](payback.png)
 
 The payback chart shows how long each purchase takes to pay for itself in real time. A healthy idle curve rises slowly and steadily; flat clouds far above the rest are walls.
 
 ## 4. Income over time and its sources
 
-![income per second](income_per_second.png)
+![Line chart: income per second while playing over the days, log scale, one line per strategy, triangles mark prestige resets](income_per_second.png)
 
-![income sources](income_sources.png)
+![Stacked area charts: daily share of coins from taps, automation while playing and offline earnings, one panel per strategy](income_sources.png)
 
 Share of coins earned from day 2 on:
 
@@ -112,18 +113,18 @@ Ablation study over 5 seeds: each event type is switched off on its own and the 
 
 | strategy | event | fired/run | shift | delay % | franchise play | earnings | net |
 |---|---|---|---|---|---|---|---|
-| best_roi | supplier_deal | 26.8 | -8.7 h | -5.2% | -10 min | +37.0% | +9.1% |
-| best_roi | inspection | 14.2 | +0.3 h | +0.2% | +0 min | -1.8% | -1.3% |
+| best_roi | supplier_deal | 26.4 | -8.7 h | -5.2% | -10 min | +37.0% | +5.5% |
+| best_roi | inspection | 14.0 | +0.3 h | +0.2% | +0 min | -1.8% | -1.3% |
 | best_roi | mafia | 8.0 | +5.4 h | +3.2% | +0 min | -27.0% | -1.1% |
 | best_roi | rival_burger | 5.6 | +0.4 h | +0.2% | +0 min | -2.3% | -1.7% |
 | best_roi | all events | — | +3.0 h | +1.8% | +0 min | -16.5% | — |
-| casual | supplier_deal | 25.2 | -11.3 h | -6.7% | -10 min | +104.4% | +4.4% |
-| casual | inspection | 13.8 | +3.2 h | +1.9% | +0 min | -15.1% | -4.4% |
-| casual | mafia | 8.2 | +0.8 h | +0.5% | +0 min | -4.5% | -4.0% |
-| casual | rival_burger | 5.6 | +2.5 h | +1.5% | +0 min | -16.8% | -4.3% |
+| casual | supplier_deal | 24.4 | -11.3 h | -6.7% | -10 min | +104.4% | +4.4% |
+| casual | inspection | 13.2 | +3.2 h | +1.9% | +0 min | -15.1% | -4.4% |
+| casual | mafia | 8.0 | +0.8 h | +0.5% | +0 min | -4.5% | -4.0% |
+| casual | rival_burger | 5.2 | +2.5 h | +1.5% | +0 min | -16.8% | -4.3% |
 | casual | all events | — | +1.7 h | +1.0% | +0 min | -10.2% | — |
 
-![event impact](event_impact.png)
+![Bar chart: hours of progress each NPC event type costs or gains by the checkpoint, per strategy](event_impact.png)
 
 Answers chosen (main runs):
 
@@ -158,9 +159,9 @@ Sorted by severity (0–100). Rules live in `doner_balance/recommend.py`; thresh
 
 - **[80] Too much play time without meaningful progress** (dead zones)  
   77% of all play time of `best_roi` is spent in stretches longer than 5 min before purchases add up to +5% income (47 dead zones, 487 min in total). 42 of them fit inside a single session (*idle sessions*): the offline earnings are spent in the first seconds of a 10-minute session and the rest of the session adds almost nothing.  
-  → Give the session itself something to do: raise active income relative to offline (lower `offline.efficiency` 0.5 → 0.35, or raise `tap.upgrades.showman.value`), and/or add short in-session goals in the game design (NPC events while playing, timed boosts). In the economy, more mid-sized purchases per tier (a 4th staff type, more equipment levels) also break up the waits.
+  → Give the session itself something to do: raise active income relative to offline (lower `offline.efficiency` 0.5 → 0.35, or raise `tap.upgrades.showman.value` (0.01 → 0.02)), and/or add short in-session goals in the game design (NPC events while playing, timed boosts). In the economy, more mid-sized purchases per tier (a 4th staff type, more equipment levels) also break up the waits.
 - **[53] Long wait for `franchise`** (dead zones)  
-  On day 5.0 (stage: restaurant (run 1)) the player waits **40 min of play** (≈ 4 sessions, 29.0 h calendar) until `franchise`; meanwhile only 1 small purchases (mostly `night_shift`).  
+  On day 5.0 (stage: restaurant (run 1)) the player waits **40 min of play** (≈ 4 sessions, 29.0 h calendar) until `franchise`; meanwhile only 1 small purchase (mostly `night_shift`).  
   → Wall before **franchise**. Keep the pacing target and fill the gap with content in the `restaurant` tier: e.g. a 4th staff item with `base_cost` ≈ 12T and `income` ≈ 380M (base payback ~1.6x the last staff), or more levels on `interior` (`max_level` +5). Lowering `tiers.franchise.unlock_cost` also helps but moves the franchise milestone earlier.
 - **[51] Long wait for `marketing_dept`** (dead zones)  
   On day 9.0 (stage: franchise (run 1)) the player waits **30 min of play** (≈ 3 sessions, 24.0 h calendar) until `marketing_dept`; meanwhile only 0 small purchases.  
@@ -229,4 +230,4 @@ Sorted by severity (0–100). Rules live in `doner_balance/recommend.py`; thresh
 | `recommendations.csv` | the findings above as a table |
 | `export/economy.json` | Godot export of this config (see `docs/GODOT_EXPORT.md`) |
 
-_Generated in 21 s._
+_Generated in 22 s._

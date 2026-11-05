@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.6", "mypy>=1.10", "types-PyYAML", "build"]
+dev = ["pytest>=8.0", "ruff>=0.6", "mypy>=1.10", "types-PyYAML", "build", "gdtoolkit>=4,<5"]
 
 [project.scripts]
 doner-balance = "doner_balance.cli:main"

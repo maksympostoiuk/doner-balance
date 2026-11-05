@@ -64,7 +64,7 @@ class GameState:
     prestiges: int = 0
     modifiers: list[Modifier] = field(default_factory=list)
 
-    def clone(self) -> "GameState":
+    def clone(self) -> GameState:
         return GameState(
             cash=self.cash,
             tiers_owned=self.tiers_owned,
@@ -117,7 +117,11 @@ def profile_weights(profile: SessionProfile) -> ProfileWeights:
     for i in range(n):
         start = profile.day_start_hour * 3600.0 + i * spacing
         end = start + profile.session_minutes * 60.0
-        nxt = profile.day_start_hour * 3600.0 + (i + 1) * spacing if i + 1 < n else 86400.0 + profile.day_start_hour * 3600.0
+        nxt = (
+            profile.day_start_hour * 3600.0 + (i + 1) * spacing
+            if i + 1 < n
+            else 86400.0 + profile.day_start_hour * 3600.0
+        )
         gaps.append(max(nxt - end, 0.0))
     return ProfileWeights(active_fraction=active / 86400.0, offline_seconds_per_day=tuple(gaps))
 
@@ -142,8 +146,9 @@ class Economy:
 
     # ------------------------------------------------------------------ state
     def new_state(self, reputation: int = 0, lifetime_total: float = 0.0, prestiges: int = 0) -> GameState:
-        st = GameState(cash=self.cfg.currency.start_cash, reputation=reputation,
-                       lifetime_total=lifetime_total, prestiges=prestiges)
+        st = GameState(
+            cash=self.cfg.currency.start_cash, reputation=reputation, lifetime_total=lifetime_total, prestiges=prestiges
+        )
         self._grant_free_levels(st, self.cfg.tiers[0])
         return st
 
@@ -255,10 +260,10 @@ class Economy:
                 lv = st.level(s.id)
                 if s.max_level is None or lv < s.max_level:
                     opts.append(Option("staff", s.id, F.level_cost(s.base_cost, s.cost_growth, lv), ti))
-            for u in tier.upgrades:
-                lv = st.level(u.id)
-                if u.max_level is None or lv < u.max_level:
-                    opts.append(Option("upgrade", u.id, F.level_cost(u.base_cost, u.cost_growth, lv), ti))
+            for up in tier.upgrades:
+                lv = st.level(up.id)
+                if up.max_level is None or lv < up.max_level:
+                    opts.append(Option("upgrade", up.id, F.level_cost(up.base_cost, up.cost_growth, lv), ti))
             for m in tier.managers:
                 if m.id not in st.managers:
                     opts.append(Option("manager", m.id, m.cost, ti))
@@ -278,8 +283,14 @@ class Economy:
         else:
             st.levels[opt.id] = st.level(opt.id) + 1
 
-    def gain(self, st: GameState, opt: Option, profile: SessionProfile, weights: ProfileWeights,
-             base_rate: float | None = None) -> float:
+    def gain(
+        self,
+        st: GameState,
+        opt: Option,
+        profile: SessionProfile,
+        weights: ProfileWeights,
+        base_rate: float | None = None,
+    ) -> float:
         """Increase of the effective income rate if ``opt`` were bought (cost ignored)."""
         if base_rate is None:
             base_rate = self.effective_rate(st, profile, weights)
@@ -300,5 +311,6 @@ class Economy:
     def prestige(self, st: GameState) -> GameState:
         """Sell the empire: returns a fresh state that keeps reputation and all-time earnings."""
         gain = self.prestige_gain(st)
-        return self.new_state(reputation=st.reputation + gain, lifetime_total=st.lifetime_total,
-                              prestiges=st.prestiges + 1)
+        return self.new_state(
+            reputation=st.reputation + gain, lifetime_total=st.lifetime_total, prestiges=st.prestiges + 1
+        )

@@ -25,17 +25,20 @@ def test_milestones_are_sorted():
     assert [m.level for m in cfg.staff_milestones] == [10, 50]
 
 
-@pytest.mark.parametrize("mutate, message", [
-    (lambda d: d["tiers"][0].update(unlock_cost=5), "first tier must be free"),
-    (lambda d: d["tiers"][1]["staff"].append(copy.deepcopy(d["tiers"][0]["staff"][0])), "globally unique"),
-    (lambda d: d["tiers"][0]["staff"][0].update(cost_growth=1.0), "greater than 1"),
-    (lambda d: d["events"][0].update(default_response="nope"), "default_response"),
-    (lambda d: d["strategies"]["best_roi"].update(profile="ghost"), "unknown profile"),
-    (lambda d: d["tiers"][1].update(free_staff_levels={"ghost": 1}), "unknown staff"),
-    (lambda d: d["prestige"].update(required_tier="moon"), "required_tier"),
-    (lambda d: d["tiers"][0].update(surprise=1), "Extra inputs"),
-    (lambda d: d["pacing"]["targets"].append({"milestone": "moon", "hours": 1, "lever": "x"}), "target milestone"),
-])
+@pytest.mark.parametrize(
+    "mutate, message",
+    [
+        (lambda d: d["tiers"][0].update(unlock_cost=5), "first tier must be free"),
+        (lambda d: d["tiers"][1]["staff"].append(copy.deepcopy(d["tiers"][0]["staff"][0])), "globally unique"),
+        (lambda d: d["tiers"][0]["staff"][0].update(cost_growth=1.0), "greater than 1"),
+        (lambda d: d["events"][0].update(default_response="nope"), "default_response"),
+        (lambda d: d["strategies"]["best_roi"].update(profile="ghost"), "unknown profile"),
+        (lambda d: d["tiers"][1].update(free_staff_levels={"ghost": 1}), "unknown staff"),
+        (lambda d: d["prestige"].update(required_tier="moon"), "required_tier"),
+        (lambda d: d["tiers"][0].update(surprise=1), "Extra inputs"),
+        (lambda d: d["pacing"]["targets"].append({"milestone": "moon", "hours": 1, "lever": "x"}), "target milestone"),
+    ],
+)
 def test_invalid_configs_fail_loudly(mutate, message):
     d = tiny_dict()
     mutate(d)

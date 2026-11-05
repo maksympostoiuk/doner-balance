@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import math
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
@@ -22,13 +23,16 @@ def milestone_table(cfg: EconomyConfig, results: dict[str, SimResult]) -> pd.Dat
     for name, r in results.items():
         for m in order:
             v = r.milestones.get(m)
-            rows.append({
-                "strategy": name, "milestone": m,
-                "calendar_h": v[0] if v else np.nan,
-                "active_min": v[1] * 60 if v else np.nan,
-                "day": v[0] / 24 if v else np.nan,
-                "reached": v is not None,
-            })
+            rows.append(
+                {
+                    "strategy": name,
+                    "milestone": m,
+                    "calendar_h": v[0] if v else np.nan,
+                    "active_min": v[1] * 60 if v else np.nan,
+                    "day": v[0] / 24 if v else np.nan,
+                    "reached": v is not None,
+                }
+            )
     return pd.DataFrame(rows)
 
 
@@ -82,33 +86,49 @@ def dead_zones(cfg: EconomyConfig, r: SimResult) -> pd.DataFrame:
     mp = meaningful_purchases(cfg, p)
     end_active_h = r.final["active_hours"]
     end_cal_h = r.timeseries["t_h"].iloc[-1] if not r.timeseries.empty else 0.0
-    points = [(0.0, 0.0, "(start)", 1)]
+    points: list[tuple[float, float, str]] = [(0.0, 0.0, "(start)")]
     for row in mp.itertuples():
-        points.append((row.active_h, row.t_h, row.item, None))
-    points.append((end_active_h, end_cal_h, "(end of run)", None))
+        points.append((float(row.active_h), float(row.t_h), str(row.item)))
+    points.append((float(end_active_h), float(end_cal_h), "(end of run)"))
     tiers_at = _tier_lookup(r)
     rows = []
-    for (a0, c0, _, _), (a1, c1, item, _) in zip(points[:-1], points[1:]):
+    for (a0, c0, _), (a1, c1, item) in itertools.pairwise(points):
         gap = (a1 - a0) * 60.0
         if gap <= thr_min:
             continue
         inside = p[(p["active_h"] > a0) & (p["active_h"] < a1)]
         top = inside["item"].value_counts()
-        rows.append({
-            "strategy": r.strategy,
-            "start_calendar_h": c0, "end_calendar_h": c1,
-            "start_day": c0 / 24.0,
-            "start_active_h": a0,
-            "gap_active_min": gap,
-            "gap_calendar_h": c1 - c0,
-            "stage": tiers_at(c0),
-            "ended_by": item,
-            "small_buys": int(len(inside)),
-            "most_bought": top.index[0] if len(top) else "",
-        })
-    return pd.DataFrame(rows, columns=[
-        "strategy", "start_calendar_h", "end_calendar_h", "start_day", "start_active_h", "gap_active_min",
-        "gap_calendar_h", "stage", "ended_by", "small_buys", "most_bought"])
+        rows.append(
+            {
+                "strategy": r.strategy,
+                "start_calendar_h": c0,
+                "end_calendar_h": c1,
+                "start_day": c0 / 24.0,
+                "start_active_h": a0,
+                "gap_active_min": gap,
+                "gap_calendar_h": c1 - c0,
+                "stage": tiers_at(c0),
+                "ended_by": item,
+                "small_buys": len(inside),
+                "most_bought": top.index[0] if len(top) else "",
+            }
+        )
+    return pd.DataFrame(
+        rows,
+        columns=[
+            "strategy",
+            "start_calendar_h",
+            "end_calendar_h",
+            "start_day",
+            "start_active_h",
+            "gap_active_min",
+            "gap_calendar_h",
+            "stage",
+            "ended_by",
+            "small_buys",
+            "most_bought",
+        ],
+    )
 
 
 def _tier_lookup(r: SimResult):
@@ -127,14 +147,16 @@ def dead_zone_summary(cfg: EconomyConfig, zones: pd.DataFrame, results: dict[str
     for name, r in results.items():
         z = zones[zones["strategy"] == name]
         total_play = r.final["active_hours"] * 60.0
-        rows.append({
-            "strategy": name,
-            "dead_zones": len(z),
-            "total_dead_min": z["gap_active_min"].sum(),
-            "share_of_play_pct": 100.0 * z["gap_active_min"].sum() / total_play if total_play else 0.0,
-            "longest_min": z["gap_active_min"].max() if len(z) else 0.0,
-            "longest_starts_day": z.loc[z["gap_active_min"].idxmax(), "start_day"] if len(z) else np.nan,
-        })
+        rows.append(
+            {
+                "strategy": name,
+                "dead_zones": len(z),
+                "total_dead_min": z["gap_active_min"].sum(),
+                "share_of_play_pct": 100.0 * z["gap_active_min"].sum() / total_play if total_play else 0.0,
+                "longest_min": z["gap_active_min"].max() if len(z) else 0.0,
+                "longest_starts_day": z.loc[z["gap_active_min"].idxmax(), "start_day"] if len(z) else np.nan,
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -160,13 +182,18 @@ def income_sources(results: dict[str, SimResult]) -> pd.DataFrame:
             tot = row.sum()
             if tot <= 0:
                 continue
-            rows.append({
-                "strategy": name, "day": int(d) + 1,
-                "tap": row["earned_tap"], "automation": row["earned_auto"], "offline": row["earned_offline"],
-                "tap_pct": 100 * row["earned_tap"] / tot if tot > 0 else np.nan,
-                "automation_pct": 100 * row["earned_auto"] / tot if tot > 0 else np.nan,
-                "offline_pct": 100 * row["earned_offline"] / tot if tot > 0 else np.nan,
-            })
+            rows.append(
+                {
+                    "strategy": name,
+                    "day": int(d) + 1,
+                    "tap": row["earned_tap"],
+                    "automation": row["earned_auto"],
+                    "offline": row["earned_offline"],
+                    "tap_pct": 100 * row["earned_tap"] / tot if tot > 0 else np.nan,
+                    "automation_pct": 100 * row["earned_auto"] / tot if tot > 0 else np.nan,
+                    "offline_pct": 100 * row["earned_offline"] / tot if tot > 0 else np.nan,
+                }
+            )
     return pd.DataFrame(rows)
 
 
@@ -195,9 +222,13 @@ class _Job:
 def _run_job(job: _Job) -> dict:
     cfg = EconomyConfig.model_validate_json(job.cfg_json)
     r = simulate(cfg, job.strategy, seed=job.seed, disabled_events=job.disabled)
-    out = {"strategy": job.strategy, "seed": job.seed, "variant": _variant(job.disabled, cfg),
-           "log10_lifetime": math.log10(max(r.final["lifetime_total"], 1.0)),
-           "reputation": r.final["reputation"]}
+    out = {
+        "strategy": job.strategy,
+        "seed": job.seed,
+        "variant": _variant(job.disabled, cfg),
+        "log10_lifetime": math.log10(max(r.final["lifetime_total"], 1.0)),
+        "reputation": r.final["reputation"],
+    }
     for m in milestone_names(cfg):
         out[m] = r.milestone_hours(m)
         out[f"{m}__active"] = r.milestone_hours(m, "active")
@@ -284,7 +315,7 @@ def event_impact_table(cfg: EconomyConfig, runs: pd.DataFrame, milestone: str | 
     ids = [e.id for e in cfg.events if e.enabled]
     for strat, g in runs.groupby("strategy"):
         base = g[g["variant"] == "all events"].set_index("seed")
-        for eid in ids + ["ALL"]:
+        for eid in [*ids, "ALL"]:
             # with a single event type, "without it" and "no events" are the same runs
             name = "no events" if eid == "ALL" or len(ids) == 1 else f"without {eid}"
             alt = g[g["variant"] == name].set_index("seed")
@@ -293,12 +324,14 @@ def event_impact_table(cfg: EconomyConfig, runs: pd.DataFrame, milestone: str | 
             with_ = base.loc[seeds, col].astype(float)
             without = alt.loc[seeds, col].astype(float)
             delay = with_ - without
-            life = 100.0 * (10 ** (base.loc[seeds, "log10_lifetime_at_check"]
-                                   - alt.loc[seeds, "log10_lifetime_at_check"]) - 1.0)
+            life = 100.0 * (
+                10 ** (base.loc[seeds, "log10_lifetime_at_check"] - alt.loc[seeds, "log10_lifetime_at_check"]) - 1.0
+            )
             chk = cfg.analysis.event_checkpoint_hours
             shifts = pd.Series([progress_shift_h(base.loc[sd], alt.loc[sd], chk) for sd in seeds], dtype=float)
             row = {
-                "strategy": strat, "event": eid if eid != "ALL" else "all events",
+                "strategy": strat,
+                "event": eid if eid != "ALL" else "all events",
                 "shift_h": float(shifts.median()),
                 "delay_pct": float((100 * shifts / chk).median()),
                 "milestone": milestone,
@@ -322,7 +355,9 @@ def response_mix(results: dict[str, SimResult]) -> pd.DataFrame:
         c = r.events.groupby(["event", "response"]).size().reset_index(name="count")
         c.insert(0, "strategy", name)
         rows.append(c)
-    return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame(columns=["strategy", "event", "response", "count"])
+    return (
+        pd.concat(rows, ignore_index=True) if rows else pd.DataFrame(columns=["strategy", "event", "response", "count"])
+    )
 
 
 # --------------------------------------------------------------------------- stages & prestige
@@ -362,9 +397,15 @@ def stage_lengths(cfg: EconomyConfig, r: SimResult) -> pd.DataFrame:
     marks.append(end)
     rows = []
     for i in range(len(marks) - 1):
-        rows.append({"strategy": r.strategy, "stage": names[i],
-                     "calendar_h": marks[i + 1][0] - marks[i][0],
-                     "play_min": 60 * (marks[i + 1][1] - marks[i][1]),
-                     "ends_with": names[i + 1] if i + 1 < len(names) and cfg.tiers[i + 1].id in r.milestones
-                     else ("first_prestige" if "first_prestige" in r.milestones else "(end of run)")})
+        rows.append(
+            {
+                "strategy": r.strategy,
+                "stage": names[i],
+                "calendar_h": marks[i + 1][0] - marks[i][0],
+                "play_min": 60 * (marks[i + 1][1] - marks[i][1]),
+                "ends_with": names[i + 1]
+                if i + 1 < len(names) and cfg.tiers[i + 1].id in r.milestones
+                else ("first_prestige" if "first_prestige" in r.milestones else "(end of run)"),
+            }
+        )
     return pd.DataFrame(rows)

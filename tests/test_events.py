@@ -9,8 +9,15 @@ from doner_balance.strategies import make_strategy
 
 
 def _event(responses, **kw) -> NpcEvent:
-    base = dict(id="test", name="Test", npc="mafia", min_tier="kiosk", rate_per_hour=1,
-                default_response=responses[0].id, responses=responses)
+    base = dict(
+        id="test",
+        name="Test",
+        npc="mafia",
+        min_tier="kiosk",
+        rate_per_hour=1,
+        default_response=responses[0].id,
+        responses=responses,
+    )
     base.update(kw)
     return NpcEvent(**base)
 
@@ -39,10 +46,18 @@ def _prep(engine, ev):
 
 def test_certain_and_impossible_outcomes(engine, tiny):
     econ = Economy(tiny)
-    sure = _event([Response(id="r", name="R", effects=[
-        Effect(probability=1, cash_loss=Amount(cash_fraction=0.5), income_mult=0.5, duration_hours=2)])])
-    never = _event([Response(id="r", name="R", effects=[
-        Effect(probability=0, cash_loss=Amount(cash_fraction=0.5))])], id="never")
+    sure = _event(
+        [
+            Response(
+                id="r",
+                name="R",
+                effects=[Effect(probability=1, cash_loss=Amount(cash_fraction=0.5), income_mult=0.5, duration_hours=2)],
+            )
+        ]
+    )
+    never = _event(
+        [Response(id="r", name="R", effects=[Effect(probability=0, cash_loss=Amount(cash_fraction=0.5))])], id="never"
+    )
     _prep(engine, sure)
     _prep(engine, never)
     st = econ.new_state()
@@ -58,8 +73,7 @@ def test_certain_and_impossible_outcomes(engine, tiny):
 def test_cash_never_goes_negative(engine, tiny):
     st = Economy(tiny).new_state()
     st.cash = 5
-    ev = _event([Response(id="r", name="R", cost=Amount(flat=100),
-                          effects=[Effect(cash_loss=Amount(flat=100))])])
+    ev = _event([Response(id="r", name="R", cost=Amount(flat=100), effects=[Effect(cash_loss=Amount(flat=100))])])
     _prep(engine, ev)
     engine.resolve(ev, ev.responses[0], st, 0, 0)
     assert st.cash == 0

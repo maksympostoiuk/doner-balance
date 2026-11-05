@@ -5,15 +5,18 @@ from `config/economy.yaml`. The output is deterministic (no timestamps, stable k
 so a `git diff` of the JSON shows exactly what a balance change did.
 
 A ready-to-use GDScript implementation lives in [`godot/economy.gd`](../godot/economy.gd)
-(Godot 4.x). Copy both files into the Godot project, call `load_file()` and `self_test()`.
+(Godot 4.x). Copy `economy.json`, `translations.csv` and the script into the Godot project, call
+`load_file()` and `self_test()`, and show names with `display_name(obj)`.
 
 ## Top level
 
 | key | type | meaning |
 |-----|------|---------|
 | `format` | string | always `"doner-lamar-economy"` |
-| `format_version` | int | bumped on any breaking change (currently `1`) |
+| `format_version` | int | bumped on any breaking change (currently `2`) |
 | `economy_name`, `economy_version` | string | from the YAML (`name`, `version`) |
+| `economy_name_key` | string | translation key of the game name (`GAME_NAME`) |
+| `localization` | object | `{default_language, languages, csv}` — `csv` is the translation file next to the JSON |
 | `currency` | object | `{id, name, start_cash}` |
 | `formulas` | object | human-readable formula strings (documentation only) |
 | `staff_milestones` | array | `[{level, mult}]`, sorted by level |
@@ -23,6 +26,11 @@ A ready-to-use GDScript implementation lives in [`godot/economy.gd`](../godot/ec
 | `prestige` | object | see below |
 | `events` | array | `[NpcEvent]` (only enabled events are exported) |
 | `test_vectors` | object | expected values for verifying a port (see below) |
+
+Every named object (tier, staff, upgrade, manager, tap upgrade, event, event response, currency)
+carries `name` (text in the default language) **and** `name_key` (stable translation key such as
+`STAFF_NEPHEW_NAME`; `prestige.currency_name_key` for the prestige currency). Show
+`tr(name_key)` in the UI and fall back to `name` when there is no translation.
 
 All money values are plain JSON numbers (64-bit floats; GDScript `float` is 64-bit too).
 Times are hours where the key ends in `_hours`, otherwise seconds.
@@ -91,6 +99,29 @@ reputation_total    = floor(scale * (all_time_earnings / base_requirement) ^ exp
 - `reputation`: `[{all_time_earnings, reputation_total}]`
 - `sample_state`: `{tiers_owned, levels, managers, reputation, expected: {global_mult, auto_income, tap_value, offline_income_per_sec, offline_cap_hours}}`
   (no event modifiers active).
+
+## Translations — `export/translations.csv`
+
+Written next to the JSON in Godot's CSV translation format:
+
+```
+keys,en,uk
+GAME_NAME,Doner Lamar,
+STAFF_NEPHEW_NAME,Nephew Arsen (helper),
+```
+
+The default-language column comes from the names in `config/economy.yaml`; other columns come
+from `config/translations/<lang>.yaml` (`KEY: text`) for every language in
+`localization.languages`. Untranslated cells are left **empty** — `python -m doner_balance
+validate` lists them. Set *Project Settings → Internationalization → Locale → Fallback* to the
+default language so a missing text shows the default-language name instead of the key.
+
+## Changelog
+
+- **v2** — `name_key` on every named object, `economy_name_key`, `prestige.currency_name_key`,
+  top-level `localization`, `translations.csv` next to the JSON. GDScript: `display_name()`,
+  `reputation_gain()`, `can_sell_empire()`.
+- **v1** — first version.
 
 ## Versioning
 

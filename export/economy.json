@@ -1,12 +1,21 @@
 {
   "format": "doner-lamar-economy",
-  "format_version": 1,
+  "format_version": 2,
   "economy_name": "Doner Lamar",
+  "economy_name_key": "GAME_NAME",
   "economy_version": "0.1.0",
+  "localization": {
+    "default_language": "en",
+    "languages": [
+      "en"
+    ],
+    "csv": "translations.csv"
+  },
   "currency": {
     "id": "coins",
     "name": "Coins",
-    "start_cash": 0.0
+    "start_cash": 0.0,
+    "name_key": "CURRENCY_NAME"
   },
   "formulas": {
     "level_cost": "base_cost * pow(cost_growth, level)   # level = levels already owned",
@@ -52,7 +61,8 @@
         "value": 1.0,
         "base_cost": 10.0,
         "cost_growth": 1.18,
-        "max_level": 50
+        "max_level": 50,
+        "name_key": "TAP_UPGRADE_KNIFE_NAME"
       },
       {
         "id": "wrapping",
@@ -61,7 +71,8 @@
         "value": 0.25,
         "base_cost": 300.0,
         "cost_growth": 1.6,
-        "max_level": 12
+        "max_level": 12,
+        "name_key": "TAP_UPGRADE_WRAPPING_NAME"
       },
       {
         "id": "showman",
@@ -70,7 +81,8 @@
         "value": 0.01,
         "base_cost": 20000.0,
         "cost_growth": 3.0,
-        "max_level": 15
+        "max_level": 15,
+        "name_key": "TAP_UPGRADE_SHOWMAN_NAME"
       }
     ]
   },
@@ -78,6 +90,7 @@
     {
       "id": "kiosk",
       "name": "Metro kiosk",
+      "name_key": "TIER_KIOSK_NAME",
       "index": 0,
       "unlock_cost": 0.0,
       "tap_mult": 1.0,
@@ -90,7 +103,8 @@
           "base_cost": 15.0,
           "cost_growth": 1.12,
           "income": 0.4,
-          "max_level": null
+          "max_level": null,
+          "name_key": "STAFF_NEPHEW_NAME"
         },
         {
           "id": "grill_cook",
@@ -98,7 +112,8 @@
           "base_cost": 200.0,
           "cost_growth": 1.13,
           "income": 3.0,
-          "max_level": null
+          "max_level": null,
+          "name_key": "STAFF_GRILL_COOK_NAME"
         },
         {
           "id": "cashier",
@@ -106,7 +121,8 @@
           "base_cost": 3000.0,
           "cost_growth": 1.14,
           "income": 25.0,
-          "max_level": null
+          "max_level": null,
+          "name_key": "STAFF_CASHIER_NAME"
         }
       ],
       "upgrades": [
@@ -117,7 +133,8 @@
           "value": 0.08,
           "base_cost": 500.0,
           "cost_growth": 1.5,
-          "max_level": 10
+          "max_level": 10,
+          "name_key": "UPGRADE_GARLIC_SAUCE_NAME"
         },
         {
           "id": "second_grill",
@@ -126,7 +143,8 @@
           "value": 0.1,
           "base_cost": 2000.0,
           "cost_growth": 1.7,
-          "max_level": 6
+          "max_level": 6,
+          "name_key": "UPGRADE_SECOND_GRILL_NAME"
         }
       ],
       "managers": [
@@ -136,13 +154,15 @@
           "cost": 2500.0,
           "income_mult": 1.0,
           "enables_offline": true,
-          "offline_cap_hours_add": 0.0
+          "offline_cap_hours_add": 0.0,
+          "name_key": "MANAGER_AUNT_ZINA_NAME"
         }
       ]
     },
     {
       "id": "cafe",
       "name": "Shawarma cafe",
+      "name_key": "TIER_CAFE_NAME",
       "index": 1,
       "unlock_cost": 30000.0,
       "tap_mult": 2.0,
@@ -157,7 +177,8 @@
           "base_cost": 20000.0,
           "cost_growth": 1.13,
           "income": 40.0,
-          "max_level": null
+          "max_level": null,
+          "name_key": "STAFF_WAITER_NAME"
         },
         {
           "id": "cafe_chef",
@@ -165,7 +186,8 @@
           "base_cost": 300000.0,
           "cost_growth": 1.14,
           "income": 300.0,
-          "max_level": null
+          "max_level": null,
+          "name_key": "STAFF_CAFE_CHEF_NAME"
         },
         {
           "id": "courier",
@@ -173,7 +195,8 @@
           "base_cost": 5000000.0,
           "cost_growth": 1.15,
           "income": 3000.0,
-          "max_level": null
+          "max_level": null,
+          "name_key": "STAFF_COURIER_NAME"
         }
       ],
       "upgrades": [
@@ -184,7 +207,8 @@
           "value": 0.08,
           "base_cost": 500000.0,
           "cost_growth": 1.5,
-          "max_level": 10
+          "max_level": 10,
+          "name_key": "UPGRADE_LAMB_MENU_NAME"
         },
         {
           "id": "rotisserie",
@@ -193,7 +217,8 @@
           "value": 0.1,
           "base_cost": 2000000.0,
           "cost_growth": 1.7,
-          "max_level": 6
+          "max_level": 6,
+          "name_key": "UPGRADE_ROTISSERIE_NAME"
         }
       ],
       "managers": [
@@ -203,13 +228,15 @@
           "cost": 45000.0,
           "income_mult": 1.1,
           "enables_offline": true,
-          "offline_cap_hours_add": 1.0
+          "offline_cap_hours_add": 1.0,
+          "name_key": "MANAGER_RUSTAM_NAME"
         }
       ]
     },
     {
       "id": "restaurant",
       "name": "Doner restaurant",
+      "name_key": "TIER_RESTAURANT_NAME",
       "index": 2,
       "unlock_cost": 43000000.0,
       "tap_mult": 4.0,
@@ -224,7 +251,8 @@
           "base_cost": 21000000.0,
           "cost_growth": 1.13,
           "income": 6400.0,
-          "max_level": null
+          "max_level": null,
+          "name_key": "STAFF_SOUS_CHEF_NAME"
         },
         {
           "id": "head_chef",
@@ -232,7 +260,8 @@
           "base_cost": 340000000.0,
           "cost_growth": 1.14,
           "income": 51000.0,
-          "max_level": null
+          "max_level": null,
+          "name_key": "STAFF_HEAD_CHEF_NAME"
         },
         {
           "id": "catering",
@@ -240,7 +269,8 @@
           "base_cost": 5100000000.0,
           "cost_growth": 1.15,
           "income": 430000.0,
-          "max_level": null
+          "max_level": null,
+          "name_key": "STAFF_CATERING_NAME"
         },
         {
           "id": "night_shift",
@@ -248,7 +278,8 @@
           "base_cost": 86000000000.0,
           "cost_growth": 1.15,
           "income": 4300000.0,
-          "max_level": null
+          "max_level": null,
+          "name_key": "STAFF_NIGHT_SHIFT_NAME"
         }
       ],
       "upgrades": [
@@ -259,7 +290,8 @@
           "value": 0.08,
           "base_cost": 430000000.0,
           "cost_growth": 1.5,
-          "max_level": 10
+          "max_level": 10,
+          "name_key": "UPGRADE_INTERIOR_NAME"
         },
         {
           "id": "tandoor",
@@ -268,7 +300,8 @@
           "value": 0.1,
           "base_cost": 1700000000.0,
           "cost_growth": 1.7,
-          "max_level": 6
+          "max_level": 6,
+          "name_key": "UPGRADE_TANDOOR_NAME"
         },
         {
           "id": "delivery_app",
@@ -277,7 +310,8 @@
           "value": 0.08,
           "base_cost": 29000000000.0,
           "cost_growth": 1.5,
-          "max_level": 10
+          "max_level": 10,
+          "name_key": "UPGRADE_DELIVERY_APP_NAME"
         }
       ],
       "managers": [
@@ -287,13 +321,15 @@
           "cost": 64000000.0,
           "income_mult": 1.25,
           "enables_offline": true,
-          "offline_cap_hours_add": 2.0
+          "offline_cap_hours_add": 2.0,
+          "name_key": "MANAGER_GM_LENA_NAME"
         }
       ]
     },
     {
       "id": "franchise",
       "name": "International franchise",
+      "name_key": "TIER_FRANCHISE_NAME",
       "index": 3,
       "unlock_cost": 57000000000000.0,
       "tap_mult": 8.0,
@@ -308,7 +344,8 @@
           "base_cost": 28000000000000.0,
           "cost_growth": 1.12,
           "income": 1100000000.0,
-          "max_level": null
+          "max_level": null,
+          "name_key": "STAFF_FRANCHISEE_NAME"
         },
         {
           "id": "regional_director",
@@ -316,7 +353,8 @@
           "base_cost": 460000000000000.0,
           "cost_growth": 1.13,
           "income": 9000000000.0,
-          "max_level": null
+          "max_level": null,
+          "name_key": "STAFF_REGIONAL_DIRECTOR_NAME"
         },
         {
           "id": "marketing_dept",
@@ -324,7 +362,8 @@
           "base_cost": 6800000000000000.0,
           "cost_growth": 1.14,
           "income": 68000000000.0,
-          "max_level": null
+          "max_level": null,
+          "name_key": "STAFF_MARKETING_DEPT_NAME"
         }
       ],
       "upgrades": [
@@ -335,7 +374,8 @@
           "value": 0.08,
           "base_cost": 570000000000000.0,
           "cost_growth": 1.5,
-          "max_level": 10
+          "max_level": 10,
+          "name_key": "UPGRADE_TV_CAMPAIGN_NAME"
         },
         {
           "id": "central_kitchen",
@@ -344,7 +384,8 @@
           "value": 0.1,
           "base_cost": 2300000000000000.0,
           "cost_growth": 1.7,
-          "max_level": 6
+          "max_level": 6,
+          "name_key": "UPGRADE_CENTRAL_KITCHEN_NAME"
         }
       ],
       "managers": [
@@ -354,7 +395,8 @@
           "cost": 12000000000000.0,
           "income_mult": 1.5,
           "enables_offline": true,
-          "offline_cap_hours_add": 4.0
+          "offline_cap_hours_add": 4.0,
+          "name_key": "MANAGER_COO_NAME"
         }
       ]
     }
@@ -372,7 +414,8 @@
     "exponent": 0.5,
     "scale": 10.0,
     "bonus_per_point": 0.02,
-    "min_points": 10
+    "min_points": 10,
+    "currency_name_key": "PRESTIGE_CURRENCY_NAME"
   },
   "events": [
     {
@@ -384,6 +427,7 @@
       "rate_per_hour": 0.08,
       "cooldown_hours": 6.0,
       "default_response": "accept",
+      "name_key": "EVENT_SUPPLIER_DEAL_NAME",
       "responses": [
         {
           "id": "accept",
@@ -402,7 +446,8 @@
               "cash_loss": null,
               "cash_gain": null
             }
-          ]
+          ],
+          "name_key": "EVENT_SUPPLIER_DEAL_RESPONSE_ACCEPT_NAME"
         },
         {
           "id": "contract",
@@ -421,7 +466,8 @@
               "cash_loss": null,
               "cash_gain": null
             }
-          ]
+          ],
+          "name_key": "EVENT_SUPPLIER_DEAL_RESPONSE_CONTRACT_NAME"
         },
         {
           "id": "decline",
@@ -431,7 +477,8 @@
             "cash_fraction": 0.0,
             "income_seconds": 0.0
           },
-          "effects": []
+          "effects": [],
+          "name_key": "EVENT_SUPPLIER_DEAL_RESPONSE_DECLINE_NAME"
         }
       ]
     },
@@ -444,6 +491,7 @@
       "rate_per_hour": 0.04,
       "cooldown_hours": 12.0,
       "default_response": "pay_fine",
+      "name_key": "EVENT_INSPECTION_NAME",
       "responses": [
         {
           "id": "pay_fine",
@@ -453,7 +501,8 @@
             "cash_fraction": 0.1,
             "income_seconds": 120.0
           },
-          "effects": []
+          "effects": [],
+          "name_key": "EVENT_INSPECTION_RESPONSE_PAY_FINE_NAME"
         },
         {
           "id": "renovate",
@@ -472,7 +521,8 @@
               "cash_loss": null,
               "cash_gain": null
             }
-          ]
+          ],
+          "name_key": "EVENT_INSPECTION_RESPONSE_RENOVATE_NAME"
         },
         {
           "id": "bribe",
@@ -495,7 +545,8 @@
               },
               "cash_gain": null
             }
-          ]
+          ],
+          "name_key": "EVENT_INSPECTION_RESPONSE_BRIBE_NAME"
         }
       ]
     },
@@ -508,6 +559,7 @@
       "rate_per_hour": 0.03,
       "cooldown_hours": 24.0,
       "default_response": "pay",
+      "name_key": "EVENT_MAFIA_NAME",
       "responses": [
         {
           "id": "pay",
@@ -517,7 +569,8 @@
             "cash_fraction": 0.15,
             "income_seconds": 0.0
           },
-          "effects": []
+          "effects": [],
+          "name_key": "EVENT_MAFIA_RESPONSE_PAY_NAME"
         },
         {
           "id": "refuse",
@@ -540,7 +593,8 @@
               },
               "cash_gain": null
             }
-          ]
+          ],
+          "name_key": "EVENT_MAFIA_RESPONSE_REFUSE_NAME"
         },
         {
           "id": "police",
@@ -559,7 +613,8 @@
               "cash_loss": null,
               "cash_gain": null
             }
-          ]
+          ],
+          "name_key": "EVENT_MAFIA_RESPONSE_POLICE_NAME"
         }
       ]
     },
@@ -572,6 +627,7 @@
       "rate_per_hour": 0.02,
       "cooldown_hours": 36.0,
       "default_response": "ignore",
+      "name_key": "EVENT_RIVAL_BURGER_NAME",
       "responses": [
         {
           "id": "ignore",
@@ -590,7 +646,8 @@
               "cash_loss": null,
               "cash_gain": null
             }
-          ]
+          ],
+          "name_key": "EVENT_RIVAL_BURGER_RESPONSE_IGNORE_NAME"
         },
         {
           "id": "promo",
@@ -609,7 +666,8 @@
               "cash_loss": null,
               "cash_gain": null
             }
-          ]
+          ],
+          "name_key": "EVENT_RIVAL_BURGER_RESPONSE_PROMO_NAME"
         },
         {
           "id": "doner_burger",
@@ -628,7 +686,8 @@
               "cash_loss": null,
               "cash_gain": null
             }
-          ]
+          ],
+          "name_key": "EVENT_RIVAL_BURGER_RESPONSE_DONER_BURGER_NAME"
         }
       ]
     }

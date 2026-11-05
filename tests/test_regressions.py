@@ -1,6 +1,7 @@
 """Regression tests for bugs found in the second-pass code review."""
 
 import copy
+import itertools
 import math
 
 import pandas as pd
@@ -99,12 +100,14 @@ def test_reputation_gained_is_numeric(default_cfg):
 def test_prestige_rule_reads_the_reference_strategy():
     cfg = config_from_dict(_default_dict())
     ref = simulate(cfg, "best_roi", days=21)
-    runs = pd.DataFrame([
-        {"strategy": "other", "run": 1, "franchise_after_h": 1000.0, "reputation_gained": 999},
-        {"strategy": "other", "run": 2, "franchise_after_h": 999.0, "reputation_gained": 0},
-        {"strategy": "best_roi", "run": 1, "franchise_after_h": 150.0, "reputation_gained": 54},
-        {"strategy": "best_roi", "run": 2, "franchise_after_h": 50.0, "reputation_gained": 0},
-    ])
+    runs = pd.DataFrame(
+        [
+            {"strategy": "other", "run": 1, "franchise_after_h": 1000.0, "reputation_gained": 999},
+            {"strategy": "other", "run": 2, "franchise_after_h": 999.0, "reputation_gained": 0},
+            {"strategy": "best_roi", "run": 1, "franchise_after_h": 150.0, "reputation_gained": 54},
+            {"strategy": "best_roi", "run": 2, "franchise_after_h": 50.0, "reputation_gained": 0},
+        ]
+    )
     recs = prestige_rules(cfg, ref, runs)
     loop = [r for r in recs if r.area == "prestige" and "Run 2" in r.evidence]
     assert loop and "x3.0" in loop[0].evidence and "54 reputation" in loop[0].evidence
@@ -141,35 +144,46 @@ def test_replan_interval_comes_from_config(default_cfg, monkeypatch):
 
     monkeypatch.setattr(sim.strategy, "choose", spy)
     sim.run()
-    gaps = [b - a for a, b in zip(calls, calls[1:], strict=False)]
+    gaps = [b - a for a, b in itertools.pairwise(calls)]
     assert min(gaps) <= 7.0 and max(gaps) <= 7.0 + 1e-9
 
 
 # --------------------------------------------------------------------------- validation & security
 
 
-@pytest.mark.parametrize("mutate, message", [
-    (lambda d: d["strategies"].update({"../../etc/x": d["strategies"]["best_roi"]}), "should match pattern"),
-    (lambda d: d["tiers"][0]["staff"][0].update(id="nephew.x"), "should match pattern"),
-    (lambda d: d["tiers"][0].update(name=""), "at least 1 character"),
-    (lambda d: d["events"].append(copy.deepcopy(d["events"][0])), "event ids must be unique"),
-    (lambda d: d["events"][0]["responses"].append(copy.deepcopy(d["events"][0]["responses"][0])),
-     "response ids must be unique"),
-    (lambda d: d["profiles"]["regular"].update(sessions_per_day=100, session_minutes=10), "sessions overlap"),
-    (lambda d: d["profiles"]["regular"].update(first_session_minutes=400), "sessions overlap"),
-    (lambda d: d["tiers"][1].update(free_staff_levels={"waiter": 0}), "greater than or equal to 1"),
-    (lambda d: d["tiers"][1]["staff"][0].update(max_level=1) or d["tiers"][1].update(free_staff_levels={"waiter": 3}),
-     "exceeds max_level"),
-    (lambda d: d["tiers"][1].update(staff=[]), "at least 1 item"),
-    (lambda d: d["events"][0]["responses"][0]["effects"].append({"cash_loss": {"flat": 1}, "duration_hours": 2}),
-     "duration_hours only makes sense"),
-    (lambda d: d["analysis"].update(tap_share_low_pct=70, tap_share_high_pct=60), "tap_share_low_pct"),
-    (lambda d: d["simulation"].update(extra_seeds=[42]), "must all be different"),
-    (lambda d: d["simulation"].update(days=0), "greater than 0"),
-    (lambda d: d["pacing"]["targets"][0].update(lever="tier:moon"), "unknown tier"),
-    (lambda d: d["pacing"]["targets"][0].update(lever="tap.upgrades.ghost.base_cost"), "matches nothing"),
-    (lambda d: d["pacing"]["targets"][0].update(lever="offline.requires_manager"), "is not a number"),
-])
+@pytest.mark.parametrize(
+    "mutate, message",
+    [
+        (lambda d: d["strategies"].update({"../../etc/x": d["strategies"]["best_roi"]}), "should match pattern"),
+        (lambda d: d["tiers"][0]["staff"][0].update(id="nephew.x"), "should match pattern"),
+        (lambda d: d["tiers"][0].update(name=""), "at least 1 character"),
+        (lambda d: d["events"].append(copy.deepcopy(d["events"][0])), "event ids must be unique"),
+        (
+            lambda d: d["events"][0]["responses"].append(copy.deepcopy(d["events"][0]["responses"][0])),
+            "response ids must be unique",
+        ),
+        (lambda d: d["profiles"]["regular"].update(sessions_per_day=100, session_minutes=10), "sessions overlap"),
+        (lambda d: d["profiles"]["regular"].update(first_session_minutes=400), "sessions overlap"),
+        (lambda d: d["tiers"][1].update(free_staff_levels={"waiter": 0}), "greater than or equal to 1"),
+        (
+            lambda d: (
+                d["tiers"][1]["staff"][0].update(max_level=1) or d["tiers"][1].update(free_staff_levels={"waiter": 3})
+            ),
+            "exceeds max_level",
+        ),
+        (lambda d: d["tiers"][1].update(staff=[]), "at least 1 item"),
+        (
+            lambda d: d["events"][0]["responses"][0]["effects"].append({"cash_loss": {"flat": 1}, "duration_hours": 2}),
+            "duration_hours only makes sense",
+        ),
+        (lambda d: d["analysis"].update(tap_share_low_pct=70, tap_share_high_pct=60), "tap_share_low_pct"),
+        (lambda d: d["simulation"].update(extra_seeds=[42]), "must all be different"),
+        (lambda d: d["simulation"].update(days=0), "greater than 0"),
+        (lambda d: d["pacing"]["targets"][0].update(lever="tier:moon"), "unknown tier"),
+        (lambda d: d["pacing"]["targets"][0].update(lever="tap.upgrades.ghost.base_cost"), "matches nothing"),
+        (lambda d: d["pacing"]["targets"][0].update(lever="offline.requires_manager"), "is not a number"),
+    ],
+)
 def test_new_validation_rules(mutate, message):
     from pydantic import ValidationError
 
@@ -183,8 +197,10 @@ def test_dotted_path_helpers_edge_cases():
     from doner_balance.config import expand_path, get_path, set_path
 
     d = _default_dict()
-    assert expand_path(d, "profiles.*.session_minutes") == ["profiles.regular.session_minutes",
-                                                            "profiles.casual.session_minutes"]
+    assert expand_path(d, "profiles.*.session_minutes") == [
+        "profiles.regular.session_minutes",
+        "profiles.casual.session_minutes",
+    ]
     set_path(d, "staff_milestones.0", {"level": 30, "mult": 2})
     assert d["staff_milestones"][0] == {"level": 30, "mult": 2}
     with pytest.raises(KeyError):
@@ -263,6 +279,5 @@ def test_cli_argument_checks(capsys):
 def test_cli_write_config_refuses_overrides(tmp_path, capsys):
     ov = tmp_path / "ov.yaml"
     ov.write_text("tiers.cafe.unlock_cost: 40000\n")
-    rc, out = _run_cli(["--overrides", str(ov), "tune", "--apply", str(tmp_path / "o.yaml"), "--write-config"],
-                       capsys)
+    rc, out = _run_cli(["--overrides", str(ov), "tune", "--apply", str(tmp_path / "o.yaml"), "--write-config"], capsys)
     assert rc == 2 and "cannot be combined" in out.err

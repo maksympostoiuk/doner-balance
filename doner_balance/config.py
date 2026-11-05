@@ -219,7 +219,8 @@ class SessionProfile(_Model):
         if longest > spacing_min:
             raise ValueError(
                 f"sessions overlap: {self.sessions_per_day} sessions in {self.day_end_hour - self.day_start_hour:g} h "
-                f"start every {spacing_min:g} min, but a session lasts {longest:g} min")
+                f"start every {spacing_min:g} min, but a session lasts {longest:g} min"
+            )
         return self
 
 
@@ -279,11 +280,35 @@ class AnalysisConfig(_Model):
     casual_slowdown_warn: float = Field(gt=1)
     event_impact_warn_pct: float = Field(gt=0)
     event_checkpoint_hours: float = Field(default=168, gt=0)
+    dead_zone_share_warn_pct: float = Field(default=25, ge=0, le=100)
+    dead_zone_wall_factor: float = Field(default=3, gt=1)
+    offline_share_warn_pct: float = Field(default=75, ge=0, le=100)
+    stage_share_warn_pct: float = Field(default=55, gt=0, le=100)
+    prestige_min_speedup: float = Field(default=1.4, gt=1)
+    prestige_min_gap_hours: float = Field(default=24, ge=0)
 
     @model_validator(mode="after")
     def _bounds(self) -> AnalysisConfig:
         if self.tap_share_low_pct >= self.tap_share_high_pct:
             raise ValueError("tap_share_low_pct must be below tap_share_high_pct")
+        return self
+
+
+LangCode = Annotated[str, StringConstraints(pattern=r"^[a-z]{2,3}(_[A-Z]{2})?$")]
+
+
+class LocalizationConfig(_Model):
+    default_language: LangCode = "en"  # the language the names in this file are written in
+    languages: list[LangCode] = Field(default_factory=lambda: ["en"])
+    # folder with <lang>.yaml files (KEY: text), relative to the config file
+    translations_dir: Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_][A-Za-z0-9_/-]*$")] = "translations"
+
+    @model_validator(mode="after")
+    def _langs(self) -> LocalizationConfig:
+        if len(set(self.languages)) != len(self.languages):
+            raise ValueError("localization.languages must be unique")
+        if self.default_language not in self.languages:
+            raise ValueError("localization.default_language must be one of localization.languages")
         return self
 
 
@@ -309,6 +334,7 @@ class EconomyConfig(_Model):
     simulation: SimulationConfig
     pacing: PacingConfig
     analysis: AnalysisConfig
+    localization: LocalizationConfig = Field(default_factory=LocalizationConfig)
 
     @field_validator("staff_milestones")
     @classmethod
@@ -332,6 +358,11 @@ class EconomyConfig(_Model):
         dupes = {i for i in all_ids if all_ids.count(i) > 1}
         if dupes:
             raise ValueError(f"item ids must be globally unique, duplicates: {sorted(dupes)}")
+        # ids become translation keys (upper case, "-" -> "_"), so they must stay unique after that
+        norm = [i.upper().replace("-", "_") for i in all_ids]
+        clashes = sorted({i for i, n in zip(all_ids, norm, strict=True) if norm.count(n) > 1})
+        if clashes:
+            raise ValueError(f"ids must differ by more than letter case or '-' vs '_': {clashes}")
         if self.prestige.required_tier not in tier_ids:
             raise ValueError(f"prestige.required_tier '{self.prestige.required_tier}' is not a tier")
         event_ids = [e.id for e in self.events]
@@ -346,9 +377,9 @@ class EconomyConfig(_Model):
         if self.pacing.reference_strategy not in self.strategies:
             raise ValueError("pacing.reference_strategy must be one of the strategies")
         valid_ms = {"first_upgrade", "first_prestige", *tier_ids[1:]}
-        for t in self.pacing.targets:
-            if t.milestone not in valid_ms:
-                raise ValueError(f"target milestone '{t.milestone}' must be one of {sorted(valid_ms)}")
+        for target in self.pacing.targets:
+            if target.milestone not in valid_ms:
+                raise ValueError(f"target milestone '{target.milestone}' must be one of {sorted(valid_ms)}")
         self._check_levers(tier_ids)
         return self
 

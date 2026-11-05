@@ -77,7 +77,7 @@ def nice(x: float, digits: int = 2) -> float:
     """Round to ``digits`` significant digits (for human-friendly suggestions)."""
     if x == 0 or not math.isfinite(x):
         return x
-    return round(x, -int(math.floor(math.log10(abs(x)))) + digits - 1)
+    return round(x, -math.floor(math.log10(abs(x))) + digits - 1)
 
 
 def active_hours_at(cfg: EconomyConfig, strategy: str, calendar_h: float) -> float:
@@ -146,12 +146,22 @@ def check_targets(cfg: EconomyConfig, result: SimResult) -> list[TargetCheck]:
         target_active = t.hours if t.clock == "active" else active_hours_at(cfg, result.strategy, t.hours)
         lever = t.lever if isinstance(t.lever, str) else ", ".join(t.lever)
         actual_active = result.milestone_hours(t.milestone, "active")
-        out.append(TargetCheck(
-            milestone=t.milestone, description=t.description, clock=t.clock, mode=t.mode,
-            tolerance=t.tolerance, target_h=t.hours, actual_h=actual,
-            target_active_h=target_active, actual_active_h=actual_active,
-            lever=lever, lever_value=lever_value(data, t.lever),
-            status=_status(t, actual_active, target_active)))
+        out.append(
+            TargetCheck(
+                milestone=t.milestone,
+                description=t.description,
+                clock=t.clock,
+                mode=t.mode,
+                tolerance=t.tolerance,
+                target_h=t.hours,
+                actual_h=actual,
+                target_active_h=target_active,
+                actual_active_h=actual_active,
+                lever=lever,
+                lever_value=lever_value(data, t.lever),
+                status=_status(t, actual_active, target_active),
+            )
+        )
     return out
 
 
@@ -176,7 +186,9 @@ def suggest(cfg: EconomyConfig, checks: list[TargetCheck]) -> list[TargetCheck]:
                 y = _measure(scale_lever(data, t.lever, f), strategy, c.milestone)
                 if y is not None:
                     c.suggested_factor = f
-                    c.note = f"not reached within the horizon; scaling the lever by x{f:g} reaches it at {y:.2f} h of play"
+                    c.note = (
+                        f"not reached within the horizon; scaling the lever by x{f:g} reaches it at {y:.2f} h of play"
+                    )
                     break
             else:
                 c.note = "not reached even with the lever at x0.05: the blocker is elsewhere"
@@ -296,7 +308,7 @@ def format_yaml_number(v: float) -> str:
     if float(v).is_integer() and abs(v) < 1e6:
         return str(int(v))
     if v != 0 and (abs(v) >= 1e6 or abs(v) < 1e-4):
-        exp = int(math.floor(math.log10(abs(v))))
+        exp = math.floor(math.log10(abs(v)))
         mant = f"{v / 10**exp:.3g}"
         if "." not in mant:
             mant += ".0"

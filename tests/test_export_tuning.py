@@ -37,8 +37,9 @@ def test_export_test_vectors_match_formulas(default_cfg):
     assert econ.auto_income(st) == pytest.approx(s["expected"]["auto_income"])
     for v in d["test_vectors"]["reputation"]:
         p = d["prestige"]
-        assert v["reputation_total"] == F.reputation_total(v["all_time_earnings"], p["base_requirement"],
-                                                           p["exponent"], p["scale"])
+        assert v["reputation_total"] == F.reputation_total(
+            v["all_time_earnings"], p["base_requirement"], p["exponent"], p["scale"]
+        )
 
 
 def test_tier_lever_scales_whole_tier(tiny_data):
@@ -76,11 +77,18 @@ def test_patch_yaml_text_keeps_comments(default_cfg):
 
     from doner_balance.config import config_from_dict, get_path
     from doner_balance.tuning import format_yaml_number, patch_yaml_text
+
     from .conftest import DEFAULT_CONFIG
 
     text = DEFAULT_CONFIG.read_text()
-    new = patch_yaml_text(text, {"tiers.cafe.unlock_cost": 42000, "tiers.franchise.staff.franchisee.income": 3.3e9,
-                                 "prestige.base_requirement": 1.5e16})
+    new = patch_yaml_text(
+        text,
+        {
+            "tiers.cafe.unlock_cost": 42000,
+            "tiers.franchise.staff.franchisee.income": 3.3e9,
+            "prestige.base_requirement": 1.5e16,
+        },
+    )
     data = yaml.safe_load(new)
     config_from_dict(data)
     assert get_path(data, "tiers.cafe.unlock_cost") == 42000

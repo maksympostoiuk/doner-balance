@@ -21,6 +21,7 @@ from .model import Economy, GameState, Option
 from .sessions import session_schedule
 from .strategies import Strategy, make_strategy
 
+
 def milestone_names(cfg: EconomyConfig) -> list[str]:
     """All milestones the simulator records, in progression order (tier ids come from the config)."""
     return ["first_upgrade", "first_manager", *[t.id for t in cfg.tiers[1:]], "first_prestige"]
@@ -47,9 +48,16 @@ class SimResult:
 
 
 class Simulator:
-    def __init__(self, cfg: EconomyConfig, strategy: str, seed: int | None = None,
-                 disabled_events: tuple[str, ...] | list[str] = (), days: float | None = None,
-                 stop_when: str | None = None):
+    def __init__(
+        self,
+        cfg: EconomyConfig,
+        strategy: str,
+        *,
+        seed: int | None = None,
+        disabled_events: tuple[str, ...] | list[str] = (),
+        days: float | None = None,
+        stop_when: str | None = None,
+    ):
         self.cfg = cfg
         self.stop_when = stop_when  # end the run as soon as this milestone is reached
         self.stopped = False
@@ -92,43 +100,56 @@ class Simulator:
             return
         self._next_record = self.t + self.cfg.simulation.record_every_seconds
         st = self.st
-        self.rows.append({
-            "t_h": self.t / 3600.0,
-            "day": self.t / 86400.0,
-            "active_h": self.active_t / 3600.0,
-            "is_active": active,
-            "cash": st.cash,
-            "auto_income": self.auto * self.emult,
-            "tap_income": self.tap * self.emult,
-            "active_income": (self.auto + self.tap) * self.emult,
-            "offline_rate": self.offline_rate * self.emult,
-            "effective_rate": self.strategy.effective_rate(st),
-            "event_mult": self.emult,
-            "tiers_owned": st.tiers_owned,
-            "reputation": st.reputation,
-            "prestiges": st.prestiges,
-            "lifetime_run": st.lifetime_run,
-            "lifetime_total": st.lifetime_total,
-            "earned_tap": self.earned["tap"],
-            "earned_auto": self.earned["auto"],
-            "earned_offline": self.earned["offline"],
-        })
+        self.rows.append(
+            {
+                "t_h": self.t / 3600.0,
+                "day": self.t / 86400.0,
+                "active_h": self.active_t / 3600.0,
+                "is_active": active,
+                "cash": st.cash,
+                "auto_income": self.auto * self.emult,
+                "tap_income": self.tap * self.emult,
+                "active_income": (self.auto + self.tap) * self.emult,
+                "offline_rate": self.offline_rate * self.emult,
+                "effective_rate": self.strategy.effective_rate(st),
+                "event_mult": self.emult,
+                "tiers_owned": st.tiers_owned,
+                "reputation": st.reputation,
+                "prestiges": st.prestiges,
+                "lifetime_run": st.lifetime_run,
+                "lifetime_total": st.lifetime_total,
+                "earned_tap": self.earned["tap"],
+                "earned_auto": self.earned["auto"],
+                "earned_offline": self.earned["offline"],
+            }
+        )
 
     # ------------------------------------------------------------------ actions
     def _buy(self, opt: Option) -> None:
         before = self.strategy.effective_rate(self.st)
         self.econ.apply(self.st, opt)
         after = self.strategy.effective_rate(self.st)
-        level = len(self.st.managers) if opt.kind == "manager" else (
-            self.st.tiers_owned if opt.kind == "tier" else self.st.level(opt.id))
-        self.purchases.append({
-            "t_h": self.t / 3600.0, "active_h": self.active_t / 3600.0, "run": self.st.prestiges,
-            "kind": opt.kind, "item": opt.id, "level": level, "cost": opt.cost,
-            "tier": self.cfg.tiers[opt.tier].id if opt.tier >= 0 else "tap",
-            "rate_before": before, "rate_after": after,
-            "gain_pct": 100.0 * (after - before) / before if before > 0 else float("inf"),
-            "payback_h": opt.cost / (after - before) / 3600.0 if after > before else float("inf"),
-        })
+        level = (
+            len(self.st.managers)
+            if opt.kind == "manager"
+            else (self.st.tiers_owned if opt.kind == "tier" else self.st.level(opt.id))
+        )
+        self.purchases.append(
+            {
+                "t_h": self.t / 3600.0,
+                "active_h": self.active_t / 3600.0,
+                "run": self.st.prestiges,
+                "kind": opt.kind,
+                "item": opt.id,
+                "level": level,
+                "cost": opt.cost,
+                "tier": self.cfg.tiers[opt.tier].id if opt.tier >= 0 else "tap",
+                "rate_before": before,
+                "rate_after": after,
+                "gain_pct": 100.0 * (after - before) / before if before > 0 else float("inf"),
+                "payback_h": opt.cost / (after - before) / 3600.0 if after > before else float("inf"),
+            }
+        )
         self._mark("first_upgrade")
         if opt.kind == "tier":
             self._mark(opt.id)
@@ -142,12 +163,22 @@ class Simulator:
         self.st = self.econ.prestige(self.st)
         self._refresh()
         after = self.strategy.effective_rate(self.st)
-        self.purchases.append({
-            "t_h": self.t / 3600.0, "active_h": self.active_t / 3600.0, "run": self.st.prestiges,
-            "kind": "prestige", "item": f"+{gain} {self.cfg.prestige.currency_name}", "level": self.st.reputation,
-            "cost": 0.0, "tier": "prestige", "rate_before": before, "rate_after": after,
-            "gain_pct": float("nan"), "payback_h": 0.0,
-        })
+        self.purchases.append(
+            {
+                "t_h": self.t / 3600.0,
+                "active_h": self.active_t / 3600.0,
+                "run": self.st.prestiges,
+                "kind": "prestige",
+                "item": f"+{gain} {self.cfg.prestige.currency_name}",
+                "level": self.st.reputation,
+                "cost": 0.0,
+                "tier": "prestige",
+                "rate_before": before,
+                "rate_after": after,
+                "gain_pct": float("nan"),
+                "payback_h": 0.0,
+            }
+        )
         self._mark("first_prestige")
         self.target = None
 
@@ -238,24 +269,46 @@ class Simulator:
             self.target = None
             self._shop()
             self._active(end)
-            self.session_rows.append({
-                "session": len(self.session_rows), "end_h": self.t / 3600.0, "active_h": self.active_t / 3600.0,
-                "lifetime_total": self.st.lifetime_total, "effective_rate": self.strategy.effective_rate(self.st),
-                "tiers_owned": self.st.tiers_owned, "prestiges": self.st.prestiges,
-            })
+            self.session_rows.append(
+                {
+                    "session": len(self.session_rows),
+                    "end_h": self.t / 3600.0,
+                    "active_h": self.active_t / 3600.0,
+                    "lifetime_total": self.st.lifetime_total,
+                    "effective_rate": self.strategy.effective_rate(self.st),
+                    "tiers_owned": self.st.tiers_owned,
+                    "prestiges": self.st.prestiges,
+                }
+            )
         if self.t < horizon and not self.stopped:
             self._offline(horizon, collect=False)  # trailing offline time is never collected
         self._record(active=False, force=True)
         return self._result()
 
     def _result(self) -> SimResult:
-        ev = pd.DataFrame([r.__dict__ for r in self.events.log],
-                          columns=["t", "event", "response", "cost", "cash_lost", "cash_gained", "modifiers"])
+        ev = pd.DataFrame(
+            [r.__dict__ for r in self.events.log],
+            columns=["t", "event", "response", "cost", "cash_lost", "cash_gained", "modifiers"],
+        )
         if not ev.empty:
             ev["t_h"] = ev.pop("t") / 3600.0
-        purchases = pd.DataFrame(self.purchases, columns=[
-            "t_h", "active_h", "run", "kind", "item", "level", "cost", "tier",
-            "rate_before", "rate_after", "gain_pct", "payback_h"])
+        purchases = pd.DataFrame(
+            self.purchases,
+            columns=[
+                "t_h",
+                "active_h",
+                "run",
+                "kind",
+                "item",
+                "level",
+                "cost",
+                "tier",
+                "rate_before",
+                "rate_after",
+                "gain_pct",
+                "payback_h",
+            ],
+        )
         st = self.st
         final = {
             "lifetime_total": st.lifetime_total,
@@ -267,11 +320,27 @@ class Simulator:
             "active_hours": self.active_t / 3600.0,
             **{f"earned_{k}": v for k, v in self.earned.items()},
         }
-        return SimResult(self.strategy.name, self.seed, self.disabled, pd.DataFrame(self.rows), purchases,
-                         ev, dict(self.milestones), self.events.stats, final, pd.DataFrame(self.session_rows))
+        return SimResult(
+            self.strategy.name,
+            self.seed,
+            self.disabled,
+            pd.DataFrame(self.rows),
+            purchases,
+            ev,
+            dict(self.milestones),
+            self.events.stats,
+            final,
+            pd.DataFrame(self.session_rows),
+        )
 
 
-def simulate(cfg: EconomyConfig, strategy: str, seed: int | None = None,
-             disabled_events: tuple[str, ...] | list[str] = (), days: float | None = None,
-             stop_when: str | None = None) -> SimResult:
-    return Simulator(cfg, strategy, seed, disabled_events, days, stop_when).run()
+def simulate(
+    cfg: EconomyConfig,
+    strategy: str,
+    *,
+    seed: int | None = None,
+    disabled_events: tuple[str, ...] | list[str] = (),
+    days: float | None = None,
+    stop_when: str | None = None,
+) -> SimResult:
+    return Simulator(cfg, strategy, seed=seed, disabled_events=disabled_events, days=days, stop_when=stop_when).run()

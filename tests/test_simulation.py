@@ -101,8 +101,17 @@ def test_saver_waits_for_close_tier(default_cfg):
 def test_meaningful_progress_is_cumulative(default_cfg):
     rows = []
     for i in range(12):  # twelve +1% purchases, one per minute of play
-        rows.append({"t_h": i / 60, "active_h": i / 60, "kind": "staff", "item": "x", "rate_before": 1.0,
-                     "rate_after": 1.01, "cost": 1.0})
+        rows.append(
+            {
+                "t_h": i / 60,
+                "active_h": i / 60,
+                "kind": "staff",
+                "item": "x",
+                "rate_before": 1.0,
+                "rate_after": 1.01,
+                "cost": 1.0,
+            }
+        )
     df = pd.DataFrame(rows)
     mp = meaningful_purchases(default_cfg, df)
     # +5% needs 5 compounding +1% steps (1.01^5 = 1.051)

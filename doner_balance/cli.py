@@ -60,6 +60,16 @@ def load(path: str, overrides: str | None, extra: dict[str, Any] | None = None) 
     return config_from_dict(data)
 
 
+def _translations(a: argparse.Namespace, cfg: EconomyConfig) -> tuple[Path, dict[str, dict[str, str]]]:
+    from .i18n import load_translations
+
+    directory = Path(a.config).parent / cfg.localization.translations_dir
+    try:
+        return directory, load_translations(cfg, directory)
+    except (ValueError, yaml.YAMLError) as e:
+        raise CliError(f"cannot read translations in {directory}: {e}") from e
+
+
 def _positive_float(text: str) -> float:
     v = float(text)
     if not v > 0:
@@ -79,8 +89,17 @@ def cmd_report(a: argparse.Namespace) -> int:
 
     cfg = load(a.config, a.overrides, {"simulation.days": a.days} if a.days else None)
     label = a.config + (f" + {a.overrides}" if a.overrides else "")
-    build(cfg, Path(a.out), None if a.no_export else Path(a.export), jobs=a.jobs, events=not a.no_events,
-          with_suggestions=not a.no_suggest, config_label=label)
+    _, translations = _translations(a, cfg)
+    build(
+        cfg,
+        Path(a.out),
+        None if a.no_export else Path(a.export),
+        jobs=a.jobs,
+        events=not a.no_events,
+        with_suggestions=not a.no_suggest,
+        config_label=label,
+        translations=translations,
+    )
     return 0
 
 
@@ -100,8 +119,10 @@ def cmd_simulate(a: argparse.Namespace) -> int:
         print(f"\n== {n} (seed {r.seed}, {len(r.purchases)} purchases, {len(r.events)} NPC events)")
         for m, (cal, act) in r.milestones.items():
             print(f"  {m:16s} {fmt_h(cal):>9s} calendar  {fmt_h(act):>9s} play")
-        print(f"  final: lifetime {fmt_num(r.final['lifetime_total'])}, income {fmt_num(r.final['active_income'])}/s, "
-              f"reputation {int(r.final['reputation'])}, prestiges {int(r.final['prestiges'])}")
+        print(
+            f"  final: lifetime {fmt_num(r.final['lifetime_total'])}, income {fmt_num(r.final['active_income'])}/s, "
+            f"reputation {int(r.final['reputation'])}, prestiges {int(r.final['prestiges'])}"
+        )
         if a.csv:
             out = Path(a.csv)
             out.mkdir(parents=True, exist_ok=True)
@@ -118,36 +139,48 @@ def cmd_tune(a: argparse.Namespace) -> int:
     if a.write_config and not a.apply:
         raise CliError("--write-config only works together with --apply")
     if a.write_config and a.overrides:
-        raise CliError("--write-config cannot be combined with --overrides: the tuned values would be written "
-                       "into a config that does not contain your overrides. Merge them into the YAML first.")
+        raise CliError(
+            "--write-config cannot be combined with --overrides: the tuned values would be written "
+            "into a config that does not contain your overrides. Merge them into the YAML first."
+        )
     cfg = load(a.config, a.overrides)
     ref = cfg.pacing.reference_strategy
     if not a.apply:
         checks = suggest(cfg, check_targets(cfg, simulate(cfg, ref)))
         print(f"Pacing check for reference strategy '{ref}':\n")
-        print(f"{'milestone':16s} {'target':>14s} {'actual':>10s} {'play':>9s} {'ratio':>6s}  {'status':12s} suggestion")
+        print(
+            f"{'milestone':16s} {'target':>14s} {'actual':>10s} {'play':>9s} {'ratio':>6s}  {'status':12s} suggestion"
+        )
         for c in checks:
             ratio = f"{c.ratio:.2f}" if c.ratio is not None else "—"
             sugg = ""
             if c.suggested_factor not in (None, 1.0):
-                sugg = f"{c.lever}: {fmt_num(c.lever_value)} -> {fmt_num(c.suggested_value)} (x{c.suggested_factor:.2g})"
+                sugg = (
+                    f"{c.lever}: {fmt_num(c.lever_value)} -> {fmt_num(c.suggested_value)} (x{c.suggested_factor:.2g})"
+                )
             elif c.note:
                 sugg = c.note
-            print(f"{c.milestone:16s} {fmt_h(c.target_h) + ' ' + c.clock[:3]:>14s} {fmt_h(c.actual_h):>10s} "
-                  f"{fmt_h(c.actual_active_h):>9s} {ratio:>6s}  {c.status:12s} {sugg}")
+            print(
+                f"{c.milestone:16s} {fmt_h(c.target_h) + ' ' + c.clock[:3]:>14s} {fmt_h(c.actual_h):>10s} "
+                f"{fmt_h(c.actual_active_h):>9s} {ratio:>6s}  {c.status:12s} {sugg}"
+            )
         print("\nSuggestions treat each milestone separately; run `tune --apply` for a sequential search.")
         return 0
     res = auto_tune(cfg)
     print("Auto-tune steps (play hours):")
     for s in res.steps:
-        print(f"  {s.milestone:16s} lever {s.lever:32s} x{s.factor:.3g}  {fmt_h(s.before_active_h)} -> "
-              f"{fmt_h(s.after_active_h)} (target {fmt_h(s.target_active_h)})")
+        print(
+            f"  {s.milestone:16s} lever {s.lever:32s} x{s.factor:.3g}  {fmt_h(s.before_active_h)} -> "
+            f"{fmt_h(s.after_active_h)} (target {fmt_h(s.target_active_h)})"
+        )
     out = Path(a.apply)
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w", encoding="utf-8") as fh:
-        fh.write("# Overrides written by `python -m doner_balance tune --apply`.\n"
-                 "# Use with: python -m doner_balance report --overrides " + str(out) + "\n"
-                 "# or copy the values into config/economy.yaml.\n")
+        fh.write(
+            "# Overrides written by `python -m doner_balance tune --apply`.\n"
+            "# Use with: python -m doner_balance report --overrides " + str(out) + "\n"
+            "# or copy the values into config/economy.yaml.\n"
+        )
         yaml.safe_dump(res.overrides, fh, sort_keys=False)
     if a.write_config:
         from .tuning import nice, patch_yaml_text
@@ -171,15 +204,32 @@ def cmd_export(a: argparse.Namespace) -> int:
     from .export import export_json
 
     cfg = load(a.config, a.overrides)
-    print(f"wrote {export_json(cfg, a.out)}")
+    _, translations = _translations(a, cfg)
+    path = export_json(cfg, a.out, translations)
+    print(f"wrote {path} and {path.parent / 'translations.csv'}")
     return 0
 
 
 def cmd_validate(a: argparse.Namespace) -> int:
     cfg = load(a.config, a.overrides)
     n_items = len(cfg.tap.upgrades) + sum(len(t.staff) + len(t.upgrades) + len(t.managers) for t in cfg.tiers)
-    print(f"OK: {cfg.name} v{cfg.version}: {len(cfg.tiers)} tiers, {n_items} items, {len(cfg.events)} NPC events, "
-          f"{len(cfg.strategies)} strategies, {len(cfg.pacing.targets)} pacing targets")
+    print(
+        f"OK: {cfg.name} v{cfg.version}: {len(cfg.tiers)} tiers, {n_items} items, {len(cfg.events)} NPC events, "
+        f"{len(cfg.strategies)} strategies, {len(cfg.pacing.targets)} pacing targets"
+    )
+    from .i18n import missing_translations, source_texts, unknown_translation_keys
+
+    directory, translations = _translations(a, cfg)
+    total = len(source_texts(cfg))
+    for lang, keys in missing_translations(cfg, translations).items():
+        if keys:
+            shown = ", ".join(keys[:8]) + (", ..." if len(keys) > 8 else "")
+            print(f"warning: {lang}: {len(keys)}/{total} texts missing in {directory / (lang + '.yaml')}: {shown}")
+        else:
+            print(f"{lang}: all {total} texts translated")
+    for lang, keys in unknown_translation_keys(cfg, translations).items():
+        if keys:
+            print(f"warning: {lang}: {len(keys)} stale keys (item renamed or removed): {', '.join(keys[:8])}")
     return 0
 
 
@@ -208,10 +258,18 @@ def main(argv: list[str] | None = None) -> int:
     s.set_defaults(func=cmd_simulate)
 
     t = sub.add_parser("tune", help="distance to pacing targets + suggestions")
-    t.add_argument("--apply", nargs="?", const="reports/tuned_overrides.yaml", default=None,
-                   help="auto-tune and write overrides YAML (default path: %(const)s)")
-    t.add_argument("--write-config", action="store_true",
-                   help="with --apply: also write the tuned values into the config file (keeps comments)")
+    t.add_argument(
+        "--apply",
+        nargs="?",
+        const="reports/tuned_overrides.yaml",
+        default=None,
+        help="auto-tune and write overrides YAML (default path: %(const)s)",
+    )
+    t.add_argument(
+        "--write-config",
+        action="store_true",
+        help="with --apply: also write the tuned values into the config file (keeps comments)",
+    )
     t.set_defaults(func=cmd_tune)
 
     e = sub.add_parser("export", help="write the Godot JSON export")

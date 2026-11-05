@@ -67,8 +67,11 @@ class Strategy:
         rate = self.effective_rate(st)
         eta_h = (tier.option.cost - st.cash) / rate / 3600.0 if rate > 0 else float("inf")
         if eta_h <= self.params.saver_patience_hours:
-            pocket = [s for s in scored if s.option.kind != "tier"
-                      and s.option.cost <= self.params.saver_pocket_fraction * tier.option.cost]
+            pocket = [
+                s
+                for s in scored
+                if s.option.kind != "tier" and s.option.cost <= self.params.saver_pocket_fraction * tier.option.cost
+            ]
             if pocket:
                 return min(pocket, key=lambda s: (s.payback, s.option.cost)).option
             return tier.option
@@ -86,8 +89,9 @@ class Strategy:
         return after / now >= self.params.prestige_multiplier_threshold
 
     # ------------------------------------------------------------------ NPC responses
-    def expected_cost(self, resp: Response, st: GameState, income: float, eff_rate: float,
-                      ev: NpcEvent | None = None) -> float:
+    def expected_cost(
+        self, resp: Response, st: GameState, income: float, eff_rate: float, ev: NpcEvent | None = None
+    ) -> float:
         """Expected coin cost of a response (negative = profitable).
 
         With ``ev`` given, permanent income effects that already reached ``max_stacks`` are
@@ -99,8 +103,11 @@ class Strategy:
             exp = 0.0
             exp += F.amount_value(eff.cash_loss, st.cash, income)
             exp -= F.amount_value(eff.cash_gain, st.cash, income)
-            maxed = (ev is not None and eff.duration_hours is None
-                     and st.stacks(modifier_key(ev.id, resp.id, idx)) >= eff.max_stacks)
+            maxed = (
+                ev is not None
+                and eff.duration_hours is None
+                and st.stacks(modifier_key(ev.id, resp.id, idx)) >= eff.max_stacks
+            )
             if eff.income_mult is not None and not maxed:
                 dur = horizon if eff.duration_hours is None else min(eff.duration_hours * 3600.0, horizon)
                 exp += (1.0 - eff.income_mult) * eff_rate * dur

@@ -71,7 +71,7 @@ def reputation_total(lifetime_earnings: float, base_requirement: float, exponent
     """
     if lifetime_earnings <= 0:
         return 0
-    return int(math.floor(scale * (lifetime_earnings / base_requirement) ** exponent))
+    return math.floor(scale * (lifetime_earnings / base_requirement) ** exponent)
 
 
 def reputation_multiplier(points: float, bonus_per_point: float) -> float:

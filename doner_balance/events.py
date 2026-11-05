@@ -65,9 +65,7 @@ class EventEngine:
         if t < ev.min_hours_since_start * 3600.0:
             return False
         last = self.last_fired.get(ev.id)
-        if last is not None and t - last < ev.cooldown_hours * 3600.0:
-            return False
-        return True
+        return not (last is not None and t - last < ev.cooldown_hours * 3600.0)
 
     def roll(self, st: GameState, t: float, dt: float) -> None:
         """Poisson arrivals over ``dt`` seconds; fired events become pending."""

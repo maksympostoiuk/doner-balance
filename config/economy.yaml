@@ -511,6 +511,17 @@ pacing:
       lever: prestige.base_requirement
       description: first prestige in about two weeks
 
+# -----------------------------------------------------------------------------
+# Localization: the names in this file are the default language. Every name gets a
+# translation key (e.g. STAFF_NEPHEW_NAME); other languages go to
+# config/translations/<lang>.yaml as "KEY: text". `validate` lists missing texts and the
+# export writes export/translations.csv (Godot's CSV translation format).
+# -----------------------------------------------------------------------------
+localization:
+  default_language: en
+  languages: [en]                # add e.g. uk, de, pt_BR when translations exist
+  translations_dir: translations # relative to this file
+
 analysis:
   dead_zone_threshold_active_minutes: 5   # waiting >5 min of play for a meaningful buy
   meaningful_gain_pct: 5                  # progress step: purchases adding up to +5% income
@@ -519,3 +530,9 @@ analysis:
   casual_slowdown_warn: 3                 # casual >3x slower than reference = retention risk
   event_impact_warn_pct: 10               # an NPC delaying a milestone by >10% is too harsh
   event_checkpoint_hours: 168             # earnings compared at day 7 for event impact
+  dead_zone_share_warn_pct: 25            # warn if >25% of play time is spent in dead zones
+  dead_zone_wall_factor: 3                # a single wait > 3x the threshold is reported as a "wall"
+  offline_share_warn_pct: 75              # warn if >75% of coins (day 2+) are offline earnings
+  stage_share_warn_pct: 55                # warn if one tier takes >55% of the first run
+  prestige_min_speedup: 1.4               # run 2 should reach the last tier >=1.4x faster than run 1
+  prestige_min_gap_hours: 24              # first prestige should come >=24 h after the last tier opens

@@ -145,3 +145,22 @@ in `pacing.targets`; change it and re-run `tune --apply`.
     `1e-07`, which PyYAML reads back as a *string*; `auto_tune` no longer crashes on a milestone
     reached at t = 0.
 - Tooling: `ruff` (lint) and `mypy` (typecheck) configured in `pyproject.toml`, dev extras updated.
+- **R3 — report, charts, accessibility, translations, tooling**:
+  - REPORT.md: config text is escaped in tables (a `|` in a name broke the table), stale CSV/PNG files
+    of renamed strategies are removed before writing, income checkpoints only list days inside the
+    horizon (a 3-day run printed a "day 14" value), plural fixes, no hardcoded tier names or
+    `showman` id in recommendations, every warning threshold moved to `analysis:` in the config;
+  - charts: identity no longer relies on colour alone — per-strategy marker shapes, line styles and
+    bar hatching, hatched income-source areas; line-end labels no longer collide; `%` ticks on the
+    NPC chart; week ticks follow the horizon; placeholder chart instead of a crash on empty data;
+    descriptive alt text for every image in REPORT.md;
+  - translations: every player-facing name has a key (`STAFF_NEPHEW_NAME`, …); new `localization:`
+    config section; `export/translations.csv` in Godot's CSV format; other languages from
+    `config/translations/<lang>.yaml`; `validate` and REPORT.md list missing/stale translations;
+    ids that would collide as keys are rejected;
+  - Godot export **format v2** (`name_key` everywhere, `localization` section); docs and
+    `godot/economy.gd` updated (`display_name`, `reputation_gain`, `can_sell_empire`), GDScript now
+    linted/format-checked with gdtoolkit; a test keeps `SUPPORTED_VERSION` in sync;
+  - quality gates: `scripts/check.sh` runs ruff (lint + format), mypy, gdlint, pytest and a wheel
+    build; codebase formatted with ruff; mypy found loop variables reused with different types and
+    a `None` multiplier that could reach `max()` in the NPC rule — fixed.
