@@ -10,10 +10,10 @@ Plan and status for the Doner Lamar economy simulator. Updated after every miles
 | M1 | Config model (pydantic) + default `config/economy.yaml` with comments; cost/income formulas | done |
 | M2 | Simulator: time-step loop, session model, tapping, offline earnings, NPC events (seeded) | done |
 | M3 | Player strategies: best ROI, cheapest first, saver, casual | done |
-| M4 | Analysis: milestones, dead zones, income/s, tap vs automation share, event impact; charts + CSV | in progress |
+| M4 | Analysis: milestones, dead zones, income/s, tap vs automation share, event impact; charts + CSV | done |
 | M5 | Target pacing in config + tuning helper (distance to targets, suggested parameter changes) | done |
 | M6 | Godot JSON export + format docs + GDScript example | done |
-| M7 | REPORT.md generator with concrete recommendations; one CLI command for everything | todo |
+| M7 | REPORT.md generator with concrete recommendations; one CLI command for everything | done |
 | M8 | Tests (formulas, income, events, offline, determinism), README, final balance pass + summary | todo |
 
 ## Log
@@ -44,5 +44,14 @@ Plan and status for the Doner Lamar economy simulator. Updated after every miles
   and test vectors (costs, staff income at milestone boundaries, reputation, a full sample state);
   `docs/GODOT_EXPORT.md` documents it; `godot/economy.gd` is a Godot 4 loader implementing the
   formulas with `self_test()` against the test vectors.
-- **M4 (in progress)** — `analysis.py` (milestone table, dead zones in play time, daily income by
+- **M4** — `analysis.py` (milestone table, dead zones in play time, daily income by
   source, ablation-based NPC event impact over 5 seeds, response mix) and `charts.py`.
+  Dead zones measure *progress velocity*: play time until purchases add up to +5% effective income
+  (a single-item threshold unfairly punished incremental designs). Event impact uses play time
+  (calendar time is quantized by sessions) and earnings at a fixed checkpoint (prestige timing
+  makes end-of-run earnings noisy). Charts use one fixed colour per strategy across all figures.
+- **M7** — `recommend.py` (rule-based findings with severity, evidence and a concrete action naming
+  config paths/values: pacing, dead zones incl. "idle sessions", stage length, taps, offline share,
+  casual gap, naive-buyer stall, NPC events, prestige loop), `report.py` (whole pipeline, CSVs,
+  PNGs, REPORT.md), `cli.py` (`report`, `simulate`, `tune [--apply]`, `export`, `validate`;
+  `--overrides` layering). `python -m doner_balance report` takes ~25 s (ablation runs in parallel).

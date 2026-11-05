@@ -500,7 +500,7 @@ pacing:
 
 analysis:
   dead_zone_threshold_active_minutes: 5   # waiting >5 min of play for a meaningful buy
-  meaningful_gain_pct: 5                  # a purchase is "meaningful" if it adds >=5% income
+  meaningful_gain_pct: 5                  # progress step: purchases adding up to +5% income
   tap_share_low_pct: 3                    # taps below 3% of income = tapping feels useless
   tap_share_high_pct: 60                  # taps above 60% after day 1 = automation too weak
   casual_slowdown_warn: 3                 # casual >3x slower than reference = retention risk

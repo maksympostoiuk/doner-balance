@@ -42,18 +42,39 @@ def milestone_pivot(table: pd.DataFrame, value: str = "calendar_h") -> pd.DataFr
 
 
 def meaningful_purchases(cfg: EconomyConfig, purchases: pd.DataFrame) -> pd.DataFrame:
-    thr = cfg.analysis.meaningful_gain_pct
+    """Purchases that complete a step of real progress.
+
+    Purchase gains accumulate (multiplicatively) until together they raise the effective
+    income by ``analysis.meaningful_gain_pct`` percent; the purchase that crosses the
+    threshold is "meaningful" and the counter resets. Tier unlocks and prestiges always
+    count. So ten +0.5% purchases equal one +5% purchase: what matters is progress
+    velocity, not item size.
+    """
     if purchases.empty:
         return purchases
-    m = purchases["kind"].isin(["tier", "prestige"]) | (purchases["gain_pct"] >= thr)
-    return purchases[m]
+    thr = math.log1p(cfg.analysis.meaningful_gain_pct / 100.0)
+    acc = 0.0
+    keep = []
+    for row in purchases.itertuples():
+        if row.kind in ("tier", "prestige"):
+            keep.append(True)
+            acc = 0.0
+            continue
+        if row.rate_before > 0 and row.rate_after > row.rate_before:
+            acc += math.log(row.rate_after / row.rate_before)
+        if acc >= thr:
+            keep.append(True)
+            acc = 0.0
+        else:
+            keep.append(False)
+    return purchases[np.array(keep)]
 
 
 def dead_zones(cfg: EconomyConfig, r: SimResult) -> pd.DataFrame:
     """Gaps (in play time) between meaningful purchases longer than the threshold.
 
-    A purchase is meaningful if it raises the effective income by at least
-    ``analysis.meaningful_gain_pct`` percent, unlocks a tier or is a prestige.
+    See :func:`meaningful_purchases`: a step of progress is +``meaningful_gain_pct``%
+    effective income (cumulative over purchases), a tier unlock or a prestige.
     The open gap at the end of the run is included (``ended_by`` = "(end of run)").
     """
     thr_min = cfg.analysis.dead_zone_threshold_active_minutes
@@ -270,3 +291,46 @@ def response_mix(results: dict[str, SimResult]) -> pd.DataFrame:
         c.insert(0, "strategy", name)
         rows.append(c)
     return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame(columns=["strategy", "event", "response", "count"])
+
+
+# --------------------------------------------------------------------------- stages & prestige
+
+
+def run_table(cfg: EconomyConfig, r: SimResult) -> pd.DataFrame:
+    """One row per prestige run: when each tier was reached (hours after the run started)."""
+    p = r.purchases
+    prest = p[p["kind"] == "prestige"]
+    starts = [0.0, *prest["t_h"].tolist()]
+    rows = []
+    for k, start in enumerate(starts):
+        row = {"strategy": r.strategy, "run": k + 1, "start_h": start}
+        tiers = p[(p["kind"] == "tier") & (p["run"] == k)]
+        for t in cfg.tiers[1:]:
+            hit = tiers[tiers["item"] == t.id]
+            row[f"{t.id}_after_h"] = float(hit["t_h"].iloc[0] - start) if len(hit) else np.nan
+        end = prest[prest["run"] == k + 1]
+        row["prestige_after_h"] = float(end["t_h"].iloc[0] - start) if len(end) else np.nan
+        row["reputation_gained"] = int(str(end["item"].iloc[0]).split()[0].lstrip("+")) if len(end) else 0
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def stage_lengths(cfg: EconomyConfig, r: SimResult) -> pd.DataFrame:
+    """Calendar and play time spent in each tier during the first run."""
+    names = [t.id for t in cfg.tiers]
+    marks = [(0.0, 0.0)]
+    for t in cfg.tiers[1:]:
+        m = r.milestones.get(t.id)
+        if m is None:
+            break
+        marks.append(m)
+    end = r.milestones.get("first_prestige") or (r.timeseries["t_h"].iloc[-1], r.final["active_hours"])
+    marks.append(end)
+    rows = []
+    for i in range(len(marks) - 1):
+        rows.append({"strategy": r.strategy, "stage": names[i],
+                     "calendar_h": marks[i + 1][0] - marks[i][0],
+                     "play_min": 60 * (marks[i + 1][1] - marks[i][1]),
+                     "ends_with": names[i + 1] if i + 1 < len(names) and cfg.tiers[i + 1].id in r.milestones
+                     else ("first_prestige" if "first_prestige" in r.milestones else "(end of run)")})
+    return pd.DataFrame(rows)

@@ -1,0 +1,6 @@
+milestone,clock,mode,target_h,actual_h,target_play_h,actual_play_h,ratio,status,lever,lever_value,elasticity,suggested_factor,suggested_value,note
+first_upgrade,active,at_most,0.00833,0.0011111111111111111,0.00833,0.0011111111111111111,0.13338668800853673,ok,tap.upgrades.knife.base_cost,10.0,,,,
+cafe,active,around,0.133,0.14194444444444446,0.133,0.14194444444444446,1.0672514619883042,ok,tier:cafe,30000.0,,,,
+restaurant,calendar,around,24.0,10.087777777777777,0.5,0.4211111111111111,0.8422222222222222,ok,tier:restaurant,30000000.0,,,,
+franchise,calendar,around,168.0,149.0,3.5,3.1666666666666665,0.9047619047619048,ok,tier:franchise,7000000000000.0,,,,
+first_prestige,calendar,around,336.0,226.0,7.0,4.833333333333333,0.6904761904761905,too fast,prestige.base_requirement,2700000000000.0,,,,

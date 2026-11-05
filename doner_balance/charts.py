@@ -35,8 +35,25 @@ def _style() -> None:
     })
 
 
+_ORDER: list[str] = []
+
+
+def set_strategy_order(names: list[str]) -> None:
+    """Fix the colour of every strategy (colour follows the entity in every chart)."""
+    _ORDER[:] = list(names)
+
+
 def strategy_colors(names: list[str]) -> dict[str, str]:
-    return {n: SERIES[i % len(SERIES)] for i, n in enumerate(names)}
+    order = _ORDER + [n for n in names if n not in _ORDER]
+    return {n: SERIES[order.index(n) % len(SERIES)] for n in names}
+
+
+def _plain_log_axis(axis) -> None:
+    from matplotlib.ticker import FuncFormatter, LogLocator, NullFormatter
+
+    axis.set_major_locator(LogLocator(base=10, subs=(1.0, 2.0, 5.0)))
+    axis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+    axis.set_minor_formatter(NullFormatter())
 
 
 def _save(fig, path: Path) -> Path:
@@ -109,9 +126,9 @@ def milestones_chart(cfg: EconomyConfig, table: pd.DataFrame, out: Path) -> Path
         x = d["calendar_h"].clip(lower=1 / 120)  # 30 s floor for the log axis
         ax.scatter(x, y, s=60, color=colors[name], edgecolor=SURFACE, linewidth=2, label=name, zorder=3)
         missing = d["calendar_h"].isna().to_numpy()
-        for yi in y[missing]:
-            ax.annotate("not reached", (cfg.simulation.days * 24, yi), xytext=(-4, 0),
-                        textcoords="offset points", ha="right", va="center", fontsize=8, color=INK_2)
+        if missing.any():
+            ax.scatter([cfg.simulation.days * 24] * int(missing.sum()), y[missing], s=60, facecolor=SURFACE,
+                       edgecolor=colors[name], linewidth=2, zorder=3)
     for t in cfg.pacing.targets:
         if t.milestone in ms and t.clock == "calendar":
             yi = ms.index(t.milestone)
@@ -127,9 +144,10 @@ def milestones_chart(cfg: EconomyConfig, table: pd.DataFrame, out: Path) -> Path
     ax.set_xticks(ticks)
     ax.set_xticklabels(labels)
     ax.set_xlim(1 / 120, cfg.simulation.days * 24 * 1.15)
-    ax.set_xlabel("calendar time since install (log); grey band = calendar target ± tolerance")
-    ax.set_title("Time to reach each milestone")
-    ax.legend(loc="lower right")
+    ax.set_xlabel("calendar time since install (log); grey band = calendar target ± tolerance; "
+                  "hollow = not reached")
+    ax.set_title("Time to reach each milestone", pad=28)
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=len(names), handletextpad=0.2)
     ax.grid(axis="y", visible=False)
     return _save(fig, out)
 
@@ -148,11 +166,12 @@ def dead_zones_chart(cfg: EconomyConfig, zones: pd.DataFrame, names: list[str], 
     ax.annotate(f"threshold {thr:g} min", (0, thr), xytext=(2, 4), textcoords="offset points",
                 fontsize=8, color=INK_2)
     ax.set_yscale("log")
+    _plain_log_axis(ax.yaxis)
     ax.set_xlim(-0.3, cfg.simulation.days)
     ax.set_xlabel("day the wait started")
-    ax.set_ylabel("minutes of PLAY until next meaningful buy (log)")
-    ax.set_title(f"Dead zones: waits > {thr:g} min of play for a purchase worth ≥ "
-                 f"{cfg.analysis.meaningful_gain_pct:g}% income")
+    ax.set_ylabel("minutes of PLAY until +X% income (log)")
+    ax.set_title(f"Dead zones: > {thr:g} min of play before purchases add +"
+                 f"{cfg.analysis.meaningful_gain_pct:g}% income (or a tier/prestige)")
     if len(zones):
         ax.legend(loc="upper left")
     return _save(fig, out)
@@ -185,7 +204,7 @@ def event_impact_chart(impact: pd.DataFrame, out: Path, milestone: str = "franch
     names = list(dict.fromkeys(impact["strategy"]))
     colors = strategy_colors(names)
     events = list(dict.fromkeys(impact["event"]))
-    fig, ax = plt.subplots(figsize=(10, 0.6 * len(events) * len(names) + 1.5))
+    fig, ax = plt.subplots(figsize=(10, 0.45 * len(events) * len(names) + 1.8))
     h = 0.8 / len(names)
     for i, name in enumerate(names):
         d = impact[impact["strategy"] == name].set_index("event").reindex(events)
@@ -200,7 +219,7 @@ def event_impact_chart(impact: pd.DataFrame, out: Path, milestone: str = "franch
     ax.set_yticklabels(events)
     ax.invert_yaxis()
     ax.set_xlabel(f"change in time to {milestone} caused by the event (+ = slower), median over seeds")
-    ax.set_title("Impact of each NPC event type on progress")
-    ax.legend(loc="lower right")
+    ax.set_title("Impact of each NPC event type on progress", pad=28)
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=len(names))
     ax.grid(axis="y", visible=False)
     return _save(fig, out)
