@@ -106,13 +106,13 @@ and rival barely register.
 in. Prestige timing follows a fixed "double your income" rule. The target pacing is an assumption
 in `pacing.targets`; change it and re-run `tune --apply`.
 
-## Next ideas (not done)
+## Next ideas (first pass) — status after the second pass
 
-- Monte Carlo over many seeds for the main milestone table (currently main runs use one seed;
-  the NPC ablation uses 5).
-- Session-length variance and missed days in the player model.
-- Bulk-buy (x10/x100) behaviour and "buy max" UI in strategies.
-- More prestige layers / reputation shop.
+- Monte Carlo over many seeds for the milestone table — **done** (second pass).
+- Session-length variance and missed days in the player model — **done** (second pass).
+- Bulk-buy (x10/x100) behaviour and "buy max" UI in strategies — **done** (second pass).
+- More prestige layers / reputation shop — **partly done**: threshold reputation perks; a second
+  prestige currency is still open (see below).
 
 ## Second pass (review + open items)
 
@@ -185,3 +185,39 @@ in `pacing.targets`; change it and re-run `tune --apply`.
   *Night-shift regulars* (+2 h offline cap); run 2 opens the cafe within minutes. REPORT.md lists
   which perks each player unlocked. Export **format v3** (`prestige.perks`; GDScript `start_cash()`
   and perk handling, test vectors unlock every perk).
+- **Docs** — README (quality checks, new strategies, irregular players, bulk buy, perks,
+  translations, safe ids, report sections), CLAUDE.md (gates via `scripts/check.sh`, no hardcoded
+  tier ids, safe ids), `config/translations/README.md`, `docs/GODOT_EXPORT.md` (v3 + changelog).
+
+## Second-pass summary
+
+**State of the tooling.** 148 tests (was 81), ruff lint + format clean, mypy clean, GDScript
+lint/format clean, sdist + wheel build and install verified — all in `scripts/check.sh`. The
+review fixed 9 correctness bugs (most visible: smart players wasting money on maxed NPC bonuses,
+tier names hardcoded so renamed/added tiers silently lost data, ablation crash with one NPC event,
+prestige rule reading the wrong player), closed a path-traversal hole (strategy names → file names),
+added ~20 config validations, replaced CLI tracebacks with readable errors, made the charts readable
+without colour, and added translation keys + a Godot translations CSV.
+
+**Balance.** The calibrated pacing is unchanged for the reference player: cafe 8.5 min, restaurant
+24 h, franchise 6.2 d, first prestige 12.4 d — 5/5 targets met. Numbers in REPORT.md moved slightly
+because of the fixes (e.g. dead-zone share 77% → 83% now that smart players stop buying useless
+renovations and no events fire after the last session). New players in the report: `irregular`
+(human schedule) reaches the franchise on day ~7.4–8.7, and `buy_max` plays like best ROI. The
+Monte Carlo spread shows the reference pacing is stable across seeds (franchise 6.2 d on every seed).
+The top recommendations are the same as after the first pass: idle sessions / offline dominance,
+the wall before the franchise, early franchise waits.
+
+## Still open
+
+- **Second prestige layer** (a separate currency or "sell the international brand"): a game-design
+  decision; perks cover the "reputation shop" part for now.
+- **GDScript not executed in Godot**: it parses and lints with gdtoolkit and mirrors the Python
+  formulas, but `self_test()` has not been run inside a Godot project (no Godot in this
+  environment). Run it once after importing `export/economy.json`.
+- **No translations yet**: the mechanism is in place (`localization.languages`,
+  `config/translations/<lang>.yaml`); only English names exist.
+- **Approximations**: ROI weights for irregular profiles use nominal offline gaps; the NPC
+  "shift" metric converts session counts to hours with the average session spacing.
+- **Balance work** (designer decisions, see REPORT.md): idle sessions/offline share, restaurant →
+  franchise wall, early franchise waits, whether NPCs should matter more.

@@ -26,7 +26,16 @@ uv venv --python 3.12 .venv
 uv pip install --python .venv/bin/python -e ".[dev]"
 ```
 
-(Plain `python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev]"` works too.)
+(Plain `python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev]"` works too. The `dev` extra
+adds pytest, ruff, mypy, gdtoolkit and build.)
+
+## Quality checks
+
+Lint, format, typecheck (mypy), GDScript lint, tests and a wheel build in one go:
+
+```bash
+scripts/check.sh
+```
 
 ## Run everything (one command)
 
@@ -34,11 +43,12 @@ uv pip install --python .venv/bin/python -e ".[dev]"
 .venv/bin/python -m doner_balance report
 ```
 
-This takes ~25 s and writes:
+This takes ~40 s (simulations run in parallel) and writes:
 
 - `reports/REPORT.md` — findings, tables, charts and concrete tuning recommendations
-- `reports/*.png` — charts; `reports/*.csv` — every table behind them
+- `reports/*.png` — charts; `reports/*.csv` — every table behind them (old outputs are removed first)
 - `export/economy.json` — the Godot export of the current config
+- `export/translations.csv` — every player-facing name in Godot's CSV translation format
 
 Useful flags: `--no-events` (skip the NPC ablation study), `--no-suggest` (skip the tuning
 sensitivity runs), `--days 30`, `--out other_dir`, `--overrides file.yaml`, `--config other.yaml`
@@ -72,7 +82,9 @@ The same, but also write the tuned values straight into `config/economy.yaml`
 .venv/bin/python -m doner_balance tune --apply --write-config
 ```
 
-Other commands: `export` (Godot JSON only) and `validate` (check the config).
+Other commands: `export` (Godot JSON + translations CSV only) and `validate` (check the config and
+list missing translations). Errors (missing file, invalid YAML, invalid config, unknown override
+path) are printed as one readable message with exit code 2.
 
 Run the tests:
 
@@ -117,9 +129,24 @@ the others.
 | `cheapest` | cheapest first | always buys the cheapest item that adds income |
 | `saver` | saver | saves for the next tier when it is ≤ `saver_patience_hours` away (still buying items ≤ 2% of its price), otherwise best ROI |
 | `casual` | best ROI, casual profile | 2 × 5 min per day, little tapping, default NPC answers |
+| `buy_max` | best ROI, `buy_amount: max` | presses "buy max" on the chosen item instead of buying one level |
+| `irregular` | best ROI, irregular profile | the regular plan, but sessions drift by ~1 h, vary in length, 1 in 5 sessions and 1 in 10 days are missed |
 
-All strategies sell the empire when the reputation gain would at least double income
-(`prestige_multiplier_threshold`).
+`buy_amount` (`1`, `10`, `100`, `max`) works with every policy: x10/x100 wait until the whole bundle
+is affordable, like the in-game button. All strategies sell the empire when the reputation gain
+would at least double income (`prestige_multiplier_threshold`).
+
+**Irregular players.** A profile can add `session_jitter_minutes` (start-time drift),
+`session_length_cv` (length variation), `skip_session_chance` and `skip_day_chance`. They are drawn
+from their own seeded RNG stream; the install session is never moved and sessions never overlap.
+
+**Prestige and perks.** Selling the empire (once `prestige.required_tier` is owned) converts
+all-time earnings into reputation: `floor(scale × (all_time / base_requirement)^exponent)`, each
+point +`bonus_per_point` income. `prestige.perks` unlock forever at total-reputation thresholds
+(start cash, offline cap, offline efficiency, tap or income multiplier); reputation is never spent.
+
+**Randomness.** Main runs use `simulation.seed`; the milestone spread and the NPC ablation also use
+`extra_seeds`. Same config + same seed = identical results.
 
 ## How to change the config
 
@@ -143,8 +170,16 @@ Typical edits:
 - **Change the target pacing:** `pacing.targets` (milestone, hours, `clock: calendar|active`,
   tolerance, `mode: around|at_most`, and the `lever` the tuning helper may scale: a dotted path such
   as `prestige.base_requirement`, or `tier:<id>` to scale every money value of a tier together).
-- **Change what counts as a problem:** `analysis:` (dead-zone threshold, tap-share bounds, casual
-  slowdown warning, NPC impact warning).
+- **Change what counts as a problem:** `analysis:` (dead-zone threshold and share, wall factor,
+  tap-share bounds, offline-share and stage-share warnings, casual slowdown, NPC impact warning,
+  prestige speed-up and gap).
+- **Add perks:** `prestige.perks` (id, name, reputation threshold, effect, value).
+- **Translate:** add a language to `localization.languages` and create
+  `config/translations/<lang>.yaml` with `KEY: text` lines (keys such as `STAFF_NEPHEW_NAME`;
+  `validate` lists what is missing). The names in `economy.yaml` are the default language.
+
+Ids (and strategy/profile names) may only use letters, digits, `_` and `-`: they become config
+paths, CSV file names and translation keys.
 
 Suggested loop: edit → `tune` (are the targets still met?) → `report` → read *What to tune first*.
 To try changes without touching the main file, put dotted paths in an overrides YAML and pass
@@ -163,9 +198,10 @@ events.mafia.rate_per_hour: 0.015
 1. **What to tune first:** the three most severe actionable findings, each with the evidence and a
    concrete change (config path and value).
 2. **Current balance at a glance:** milestones, stage lengths, income per second, where coins come
-   from, dead zones, targets met, prestiges.
-3. **Milestones per strategy:** calendar time since install (play time in brackets), plus
-   `milestones.png` (grey bands are the targets ± tolerance).
+   from, dead zones, targets met, translation status, prestiges.
+3. **Milestones per strategy:** calendar time since install (play time in brackets), the spread
+   over all seeds (median and 10th–90th percentile), and `milestones.png` (dot = main seed,
+   bar = percentile range, grey band = target ± tolerance, hollow = not reached).
 4. **Pacing vs targets:** each target with status and the suggested lever change. Calendar
    targets are judged on the equivalent *play time*, because calendar time jumps from session to
    session ("restaurant on day 1" means "by the end of the last session of day 1").
@@ -178,15 +214,19 @@ events.mafia.rate_per_hour: 0.015
 7. **NPC events:** ablation study over several seeds (each event switched off alone). *shift* =
    hours of progress the event costs by the checkpoint (day 7 by default); positive = it slows
    you down. Also the answers players chose.
-8. **Prestige runs:** how fast each run reaches each tier after a reset.
+8. **Prestige runs:** how fast each run reaches each tier after a reset, and which reputation perks
+   each player unlocked.
 9. **All findings:** every rule's result sorted by severity, then a prose **Summary**.
 
 ## Godot
 
 `export/economy.json` is the whole economy in a simple JSON format, documented in
 [`docs/GODOT_EXPORT.md`](docs/GODOT_EXPORT.md). [`godot/economy.gd`](godot/economy.gd) is a
-ready-to-use Godot 4 loader that implements the same formulas and verifies itself against test
-vectors embedded in the JSON (`self_test()`).
+ready-to-use Godot 4 loader that implements the same formulas (including bulk "buy max", perks and
+offline earnings), shows localized names with `display_name()` and verifies itself against test
+vectors embedded in the JSON (`self_test()`). Import `export/translations.csv` into the project
+for the names. Every chart uses colour plus a second encoding (marker, line style or hatching) and
+REPORT.md gives each chart a text description.
 
 ## Layout
 
@@ -196,7 +236,7 @@ doner_balance/
   config.py                pydantic models, validation, dotted paths
   formulas.py              cost / income / reputation / offline formulas
   model.py                 game state, income engine, purchase options
-  sessions.py              session schedule
+  sessions.py              session schedule (incl. seeded drift / missed sessions)
   events.py                NPC event engine
   strategies.py            buying policies, NPC answers, prestige rule
   simulator.py             time-step simulation
@@ -206,10 +246,13 @@ doner_balance/
   recommend.py             rule-based findings and recommendations
   report.py                full pipeline + REPORT.md
   export.py                Godot JSON export
+  i18n.py                  translation keys, translations CSV, missing-text checks
   cli.py                   command line
 tests/                     pytest suite
 reports/                   generated output
-export/economy.json        generated Godot export
+export/economy.json        generated Godot export (+ translations.csv)
+config/translations/       optional <lang>.yaml translation files
+scripts/check.sh           all quality gates
 docs/GODOT_EXPORT.md       export format
 godot/economy.gd           GDScript loader
 ```

@@ -11,7 +11,7 @@ Regenerate with `python -m doner_balance report`. All numbers below come from th
 2. **Long wait for `franchise`** (dead zones) — On day 5.0 (stage: restaurant (run 1)) the player waits **40 min of play** (≈ 4 sessions, 29.0 h calendar) until `franchise`; meanwhile only 1 small purchase (mostly `night_shift`).  
    **Do:** Wall before **franchise**. Keep the pacing target and fill the gap with content in the `restaurant` tier: e.g. a 4th staff item with `base_cost` ≈ 12T and `income` ≈ 380M (base payback ~1.6x the last staff), or more levels on `interior` (`max_level` +5). Lowering `tiers.franchise.unlock_cost` also helps but moves the franchise milestone earlier.
 
-3. **Long wait for `marketing_dept`** (dead zones) — On day 9.0 (stage: franchise (run 1)) the player waits **30 min of play** (≈ 3 sessions, 24.0 h calendar) until `marketing_dept`; meanwhile only 0 small purchases.  
+3. **Long wait for `marketing_dept`** (dead zones) — On day 9.0 (stage: franchise (run 1)) the player waits **30 min of play** (≈ 3 sessions, 24.0 h calendar) until `marketing_dept`; meanwhile no other purchases.  
    **Do:** Reduce `cost_growth` of `marketing_dept` by 0.01, or add a cheaper intermediate upgrade in stage franchise (run 1).
 
 ## Current balance at a glance
@@ -200,10 +200,10 @@ Sorted by severity (0–100). Rules live in `doner_balance/recommend.py`; thresh
   On day 5.0 (stage: restaurant (run 1)) the player waits **40 min of play** (≈ 4 sessions, 29.0 h calendar) until `franchise`; meanwhile only 1 small purchase (mostly `night_shift`).  
   → Wall before **franchise**. Keep the pacing target and fill the gap with content in the `restaurant` tier: e.g. a 4th staff item with `base_cost` ≈ 12T and `income` ≈ 380M (base payback ~1.6x the last staff), or more levels on `interior` (`max_level` +5). Lowering `tiers.franchise.unlock_cost` also helps but moves the franchise milestone earlier.
 - **[51] Long wait for `marketing_dept`** (dead zones)  
-  On day 9.0 (stage: franchise (run 1)) the player waits **30 min of play** (≈ 3 sessions, 24.0 h calendar) until `marketing_dept`; meanwhile only 0 small purchases.  
+  On day 9.0 (stage: franchise (run 1)) the player waits **30 min of play** (≈ 3 sessions, 24.0 h calendar) until `marketing_dept`; meanwhile no other purchases.  
   → Reduce `cost_growth` of `marketing_dept` by 0.01, or add a cheaper intermediate upgrade in stage franchise (run 1).
 - **[49] Long wait for `regional_director`** (dead zones)  
-  On day 7.2 (stage: franchise (run 1)) the player waits **20 min of play** (≈ 2 sessions, 19.0 h calendar) until `regional_director`; meanwhile only 0 small purchases.  
+  On day 7.2 (stage: franchise (run 1)) the player waits **20 min of play** (≈ 2 sessions, 19.0 h calendar) until `regional_director`; meanwhile no other purchases.  
   → Reduce `cost_growth` of `regional_director` by 0.01, or add a cheaper intermediate upgrade in stage franchise (run 1).
 - **[45] Offline earnings dominate** (offline)  
   From day 2 on, 90% of `best_roi`'s coins come from offline earnings; the 10-minute sessions add little beyond spending.  

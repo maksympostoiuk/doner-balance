@@ -151,8 +151,12 @@ def dead_zone_rules(
             f"On day {row.start_day:.1f} (stage: {row.stage}) the player waits "
             f"**{row.gap_active_min:.0f} min of play** "
             f"(≈ {sessions:.0f} sessions, {fmt_h(row.gap_calendar_h)} calendar) until `{row.ended_by}`; "
-            f"meanwhile only {_plural(row.small_buys, 'small purchase')}"
-            f"{f' (mostly `{row.most_bought}`)' if row.most_bought else ''}."
+            + (
+                f"meanwhile only {_plural(row.small_buys, 'small purchase')}"
+                if row.small_buys
+                else "meanwhile no other purchases"
+            )
+            + f"{f' (mostly `{row.most_bought}`)' if row.most_bought else ''}."
         )
         sev = 45 + min(row.gap_active_min / thr, 30)
         p = ref.purchases

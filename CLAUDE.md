@@ -37,8 +37,10 @@ built later in Godot; this repo only designs and tests the economy.
 6. **Godot export format** (`export/economy.json`) is documented in
    `docs/GODOT_EXPORT.md`. If you change the format, bump `format_version` and
    update the docs and the GDScript example in `godot/`.
-7. **Tests:** pytest must pass before every commit (`.venv/bin/pytest -q`). Cover cost
-   formulas, income calculations, event effects, offline earnings and determinism.
+7. **Tests and gates:** `scripts/check.sh` (ruff lint + format, mypy, gdlint, pytest, wheel
+   build) must pass before every commit — check its exit code, do not pipe it into `tail`. Cover
+   cost formulas, income calculations, event effects, offline earnings and determinism; every bug
+   fix gets a regression test (`tests/test_regressions.py`).
 8. **Workflow:** work in milestones; after each milestone update `PROGRESS.md`,
    commit with a clear message and push to the working branch.
 9. Keep `README.md` accurate: how to run a simulation, how to change the config,
@@ -54,13 +56,20 @@ reports/                   generated output (charts, CSV, REPORT.md)
 export/economy.json        generated Godot export
 docs/GODOT_EXPORT.md       export format spec
 godot/                     GDScript example loader
+export/translations.csv    generated Godot translation CSV
+config/translations/       optional <lang>.yaml translations (KEY: text)
+scripts/check.sh           all quality gates
 ```
+
+Ids and strategy/profile names: letters, digits, `_`, `-` only (they become paths, file names and
+translation keys). Never hardcode tier ids such as `franchise` in code — use the config
+(`cfg.tiers[-1]`, `milestone_names(cfg)`).
 
 ## Environment
 
 ```bash
-uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements.txt
-.venv/bin/pytest -q
+uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -e ".[dev]"
+scripts/check.sh                                              # all gates
 .venv/bin/python -m doner_balance report                      # everything -> reports/, export/
 .venv/bin/python -m doner_balance tune                        # pacing vs targets + suggestions
 .venv/bin/python -m doner_balance tune --apply --write-config # auto-tune into the YAML (keeps comments)

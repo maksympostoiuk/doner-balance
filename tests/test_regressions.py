@@ -441,3 +441,40 @@ def test_perk_validation():
     d["prestige"]["perks"][0]["id"] = "knife"  # clashes with a tap upgrade
     with pytest.raises(ValidationError, match="globally unique"):
         config_from_dict(d)
+
+
+def test_dead_zone_text_handles_zero_purchases(default_cfg):
+    from doner_balance.recommend import dead_zone_rules
+
+    ref = simulate(default_cfg, "best_roi", days=1)
+    zones = pd.DataFrame(
+        [
+            {
+                "strategy": "best_roi",
+                "start_calendar_h": 10.0,
+                "end_calendar_h": 30.0,
+                "start_day": 0.4,
+                "start_active_h": 0.3,
+                "gap_active_min": 60.0,
+                "gap_calendar_h": 20.0,
+                "stage": "cafe (run 1)",
+                "ended_by": "courier",
+                "small_buys": 0,
+                "most_bought": "",
+            }
+        ]
+    )
+    summary = pd.DataFrame(
+        [
+            {
+                "strategy": "best_roi",
+                "dead_zones": 1,
+                "total_dead_min": 60.0,
+                "share_of_play_pct": 10.0,
+                "longest_min": 60.0,
+                "longest_starts_day": 0.4,
+            }
+        ]
+    )
+    recs = dead_zone_rules(default_cfg, ref, zones, summary)
+    assert recs and "no other purchases" in recs[0].evidence and "only 0" not in recs[0].evidence
