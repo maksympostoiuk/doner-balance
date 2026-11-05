@@ -463,7 +463,8 @@ simulation:
   dt_active_seconds: 1           # time step while playing
   dt_offline_seconds: 60         # time step while away
   record_every_seconds: 300      # timeseries resolution
-  max_purchases_per_tick: 500
+  max_purchases_per_tick: 500   # safety cap on purchases in one time step
+  replan_every_seconds: 60      # players re-think their next purchase every minute of play
 
 # -----------------------------------------------------------------------------
 # Target pacing (assumptions — edit freely). Checked against reference_strategy.

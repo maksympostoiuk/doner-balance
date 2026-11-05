@@ -11,16 +11,22 @@ from .config import Amount, Milestone
 def level_cost(base_cost: float, growth: float, level: int) -> float:
     """Price of buying the next level when ``level`` levels are already owned.
 
-    cost(level) = base_cost * growth ** level
+    cost(level) = base_cost * growth ** level  (inf instead of OverflowError for absurd levels)
     """
-    return base_cost * growth**level
+    try:
+        return base_cost * growth**level
+    except OverflowError:
+        return math.inf
 
 
 def bulk_cost(base_cost: float, growth: float, level: int, count: int) -> float:
     """Total price of buying ``count`` levels starting from ``level`` (geometric series)."""
     if count <= 0:
         return 0.0
-    return base_cost * growth**level * (growth**count - 1.0) / (growth - 1.0)
+    try:
+        return base_cost * growth**level * (growth**count - 1.0) / (growth - 1.0)
+    except OverflowError:
+        return math.inf
 
 
 def max_affordable(base_cost: float, growth: float, level: int, cash: float) -> int:

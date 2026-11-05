@@ -209,12 +209,15 @@ def casual_rules(cfg: EconomyConfig, results: dict[str, SimResult]) -> list[Reco
            < cfg.profiles[cfg.strategies[cfg.pacing.reference_strategy].profile].sessions_per_day]
     if ref is None or not cas:
         return out
+    # the furthest tier the reference player reaches
+    reached = [t.id for t in cfg.tiers[1:] if ref.milestone_hours(t.id) is not None]
+    if not reached:
+        return out
+    m = reached[-1]
+    a = ref.milestone_hours(m)
+    assert a is not None
     for name in cas:
-        r = results[name]
-        for m in [t.id for t in cfg.tiers[1:]][::-1]:
-            a, b = ref.milestone_hours(m), r.milestone_hours(m)
-            if a is not None:
-                break
+        b = results[name].milestone_hours(m)
         if b is None:
             out.append(Recommendation(
                 70, "casual", f"`{name}` never reaches {m}",
@@ -326,12 +329,13 @@ def prestige_rules(cfg: EconomyConfig, ref: SimResult, runs: pd.DataFrame) -> li
         gap = pr - fr
         if gap < 24:
             out.append(Recommendation(
-                45, "prestige", "Prestige right after the franchise",
-                f"First prestige {fmt_h(gap)} after the franchise opens: the last tier is barely played.",
+                45, "prestige", f"Prestige right after the {f_id}",
+                f"First prestige {fmt_h(gap)} after the {f_id} opens: the last tier is barely played.",
                 f"Raise `prestige.base_requirement` ({fmt_num(cfg.prestige.base_requirement)} → "
                 f"{fmt_num(nice(cfg.prestige.base_requirement * 3))}) or `strategy_params.prestige_multiplier_threshold`."))
-    r1 = runs[runs["run"] == 1]
-    r2 = runs[runs["run"] == 2]
+    mine = runs[runs["strategy"] == ref.strategy]
+    r1 = mine[mine["run"] == 1]
+    r2 = mine[mine["run"] == 2]
     col = f"{f_id}_after_h"
     if len(r1) and len(r2) and np.isfinite(r1[col].iloc[0]) and np.isfinite(r2[col].iloc[0]):
         speed = r1[col].iloc[0] / r2[col].iloc[0]

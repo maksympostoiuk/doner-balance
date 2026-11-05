@@ -10,14 +10,14 @@ import numpy as np
 import pandas as pd
 
 from .config import EconomyConfig
-from .simulator import MILESTONES, SimResult, simulate
+from .simulator import SimResult, milestone_names, simulate
 
 # --------------------------------------------------------------------------- milestones
 
 
 def milestone_table(cfg: EconomyConfig, results: dict[str, SimResult]) -> pd.DataFrame:
     """One row per (strategy, milestone) with calendar and play time."""
-    order = ["first_upgrade", "first_manager", *[t.id for t in cfg.tiers[1:]], "first_prestige"]
+    order = milestone_names(cfg)
     rows = []
     for name, r in results.items():
         for m in order:
@@ -198,7 +198,7 @@ def _run_job(job: _Job) -> dict:
     out = {"strategy": job.strategy, "seed": job.seed, "variant": _variant(job.disabled, cfg),
            "log10_lifetime": math.log10(max(r.final["lifetime_total"], 1.0)),
            "reputation": r.final["reputation"]}
-    for m in MILESTONES:
+    for m in milestone_names(cfg):
         out[m] = r.milestone_hours(m)
         out[f"{m}__active"] = r.milestone_hours(m, "active")
     ts = r.timeseries
@@ -231,7 +231,7 @@ def event_impact_runs(cfg: EconomyConfig, strategies: list[str], jobs: int = 1) 
     """Run baseline / no-events / each-event-disabled for every seed (ablation study)."""
     seeds = [cfg.simulation.seed, *cfg.simulation.extra_seeds]
     ids = [e.id for e in cfg.events if e.enabled]
-    variants: list[tuple[str, ...]] = [(), tuple(ids)] + [(i,) for i in ids]
+    variants: list[tuple[str, ...]] = list(dict.fromkeys([(), tuple(ids), *[(i,) for i in ids]]))
     cfg_json = cfg.model_dump_json()
     work = [_Job(cfg_json, s, seed, v) for s in strategies for seed in seeds for v in variants]
     if jobs > 1:
@@ -263,7 +263,7 @@ def progress_shift_h(with_row: pd.Series, without_row: pd.Series, checkpoint_h: 
     return (k - k_without) * with_row["hours_per_session"]
 
 
-def event_impact_table(cfg: EconomyConfig, runs: pd.DataFrame, milestone: str = "franchise") -> pd.DataFrame:
+def event_impact_table(cfg: EconomyConfig, runs: pd.DataFrame, milestone: str | None = None) -> pd.DataFrame:
     """Per strategy and event: how much the event changes progress (median over seeds).
 
     Ablation: compare runs with all events against runs with that one event disabled
@@ -272,19 +272,21 @@ def event_impact_table(cfg: EconomyConfig, runs: pd.DataFrame, milestone: str = 
     * ``shift_h``: hours of progress the event costs at the checkpoint
       (``analysis.event_checkpoint_hours``), see :func:`progress_shift_h`; positive = slower.
     * ``delay_pct``: ``shift_h`` relative to the checkpoint (the headline number).
-    * ``delay_play_min``: extra play time to reach ``milestone`` (coarse: purchases happen
-      in sessions).
+    * ``delay_play_min``: extra play time to reach ``milestone`` (default: the last tier;
+      coarse, because purchases happen in sessions).
     * ``earnings_change_pct``: change of all-time earnings at the checkpoint (noisy, because
       earnings grow exponentially).
     * ``net_pct_of_lifetime``: direct accounting of the event (income gained/lost through
       its modifiers + cash gained - response costs - cash lost) relative to final earnings.
     """
+    milestone = milestone or cfg.tiers[-1].id  # default: the last tier (franchise)
     rows = []
     ids = [e.id for e in cfg.events if e.enabled]
     for strat, g in runs.groupby("strategy"):
         base = g[g["variant"] == "all events"].set_index("seed")
         for eid in ids + ["ALL"]:
-            name = "no events" if eid == "ALL" else f"without {eid}"
+            # with a single event type, "without it" and "no events" are the same runs
+            name = "no events" if eid == "ALL" or len(ids) == 1 else f"without {eid}"
             alt = g[g["variant"] == name].set_index("seed")
             seeds = base.index.intersection(alt.index)
             col = f"{milestone}__active"
@@ -299,8 +301,9 @@ def event_impact_table(cfg: EconomyConfig, runs: pd.DataFrame, milestone: str = 
                 "strategy": strat, "event": eid if eid != "ALL" else "all events",
                 "shift_h": float(shifts.median()),
                 "delay_pct": float((100 * shifts / chk).median()),
-                f"{milestone}_day_with": float(base.loc[seeds, milestone].median() / 24),
-                f"{milestone}_day_without": float(alt.loc[seeds, milestone].median() / 24),
+                "milestone": milestone,
+                "milestone_day_with": float(base.loc[seeds, milestone].astype(float).median() / 24),
+                "milestone_day_without": float(alt.loc[seeds, milestone].astype(float).median() / 24),
                 "delay_play_min": float((60 * delay).median()),
                 "earnings_change_pct": float(life.median()),
             }
@@ -329,6 +332,8 @@ def run_table(cfg: EconomyConfig, r: SimResult) -> pd.DataFrame:
     """One row per prestige run: when each tier was reached (hours after the run started)."""
     p = r.purchases
     prest = p[p["kind"] == "prestige"]
+    # the prestige row's "level" is the reputation owned after the reset
+    gained = prest["level"].astype(float).diff().fillna(prest["level"].astype(float))
     starts = [0.0, *prest["t_h"].tolist()]
     rows = []
     for k, start in enumerate(starts):
@@ -339,7 +344,7 @@ def run_table(cfg: EconomyConfig, r: SimResult) -> pd.DataFrame:
             row[f"{t.id}_after_h"] = float(hit["t_h"].iloc[0] - start) if len(hit) else np.nan
         end = prest[prest["run"] == k + 1]
         row["prestige_after_h"] = float(end["t_h"].iloc[0] - start) if len(end) else np.nan
-        row["reputation_gained"] = int(str(end["item"].iloc[0]).split()[0].lstrip("+")) if len(end) else 0
+        row["reputation_gained"] = int(gained.loc[end.index[0]]) if len(end) else 0
         rows.append(row)
     return pd.DataFrame(rows)
 

@@ -113,3 +113,19 @@ in `pacing.targets`; change it and re-run `tune --apply`.
 - Session-length variance and missed days in the player model.
 - Bulk-buy (x10/x100) behaviour and "buy max" UI in strategies.
 - More prestige layers / reputation shop.
+
+## Second pass (review + open items)
+
+- **R1 — simulation/analysis correctness** (fixed, with regression tests in `tests/test_regressions.py`):
+  - smart NPC answers kept paying for permanent bonuses that had already hit `max_stacks`
+    (e.g. a 6th kitchen renovation that gives nothing) — expected value now ignores maxed stacks;
+  - milestone names were hardcoded (`cafe/restaurant/franchise`): renaming or adding a tier silently
+    dropped data from the NPC impact table — milestones and the impact milestone now come from the config;
+  - with exactly one NPC event the ablation ran a duplicate variant and the impact table crashed;
+  - the prestige rule read run 1/run 2 of whichever strategy came first, not the reference player;
+  - `casual_rules` divided by `None` when the reference player never left the first tier;
+  - NPC events kept firing (and income was attributed to them) after the last session, where nothing
+    is ever collected;
+  - reputation gained per run was parsed out of a display string (broke with other currency names);
+  - the 60 s re-planning interval was hardcoded → `simulation.replan_every_seconds`;
+  - cost formulas return `inf` instead of raising `OverflowError` for absurd levels.

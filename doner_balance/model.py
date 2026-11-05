@@ -37,6 +37,11 @@ class Option:
     tier: int  # tier index the item belongs to (-1 for tap upgrades)
 
 
+def modifier_key(event_id: str, response_id: str, effect_index: int) -> str:
+    """Stacking key of an income modifier created by an NPC event effect."""
+    return f"{event_id}.{response_id}.{effect_index}"
+
+
 @dataclass
 class Modifier:
     """Temporary or permanent income multiplier created by an NPC event."""
@@ -80,6 +85,9 @@ class GameState:
         if amount > 0:
             self.lifetime_run += amount
             self.lifetime_total += amount
+
+    def stacks(self, key: str) -> int:
+        return sum(1 for m in self.modifiers if m.key == key)
 
     def event_mult(self) -> float:
         m = 1.0

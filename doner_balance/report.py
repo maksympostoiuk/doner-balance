@@ -300,16 +300,17 @@ def render(d: ReportData, config_label: str, export_path: Path | None) -> str:
         w(f"- **shift** — hours of progress the event costs by hour {chk:g}: the run without the event reached the "
           "same all-time earnings that much earlier (negative = the event speeds you up). **delay %** = shift / "
           f"{chk:g} h. This is the headline number.")
-        w("- **franchise play** — extra play time to reach the franchise (coarse: purchases happen in sessions).")
+        last = cfg.tiers[-1].id
+        w(f"- **{last} play** — extra play time to reach the {last} (coarse: purchases happen in sessions).")
         w(f"- **earnings** — all-time earnings at hour {chk:g} with vs without (noisy: earnings grow exponentially).")
         w("- **net** — direct accounting (bonus income − lost income − answer costs − cash losses) / final earnings.\n")
-        imp = d.impact.rename(columns={"delay_play_min": "franchise play", "earnings_change_pct": "earnings",
+        imp = d.impact.rename(columns={"delay_play_min": f"{last} play", "earnings_change_pct": "earnings",
                                        "net_pct_of_lifetime": "net", "delay_pct": "delay %",
                                        "fired_per_run": "fired/run", "shift_h": "shift"})
-        cols = ["strategy", "event", "fired/run", "shift", "delay %", "franchise play", "earnings", "net"]
+        cols = ["strategy", "event", "fired/run", "shift", "delay %", f"{last} play", "earnings", "net"]
         w(md_table(imp[cols], {"fired/run": lambda v: "—" if not np.isfinite(v) else f"{v:.1f}",
                                "shift": lambda v: f"{v:+.1f} h" if np.isfinite(v) else "—",
-                               "franchise play": lambda v: f"{v:+.0f} min" if np.isfinite(v) else "—",
+                               f"{last} play": lambda v: f"{v:+.0f} min" if np.isfinite(v) else "—",
                                "delay %": _pct, "earnings": _pct, "net": _pct}))
         w(f"\n![event impact]({d.charts['events'].name})\n")
     w("Answers chosen (main runs):\n")
@@ -380,7 +381,8 @@ def summary_text(d: ReportData) -> str:
     st = d.stages[d.stages["strategy"] == ref_name]
     if len(st):
         longest = st.loc[st["calendar_h"].idxmax()]
-        out.append(f"**Shape.** The first run is kiosk → cafe → restaurant → franchise; the longest stage is "
+        path = " → ".join(t.id for t in cfg.tiers)
+        out.append(f"**Shape.** The first run is {path}; the longest stage is "
                    f"**{longest['stage']}** ({fmt_h(longest['calendar_h'])}, {longest['play_min']:.0f} min of play).")
     src = d.sources[(d.sources["strategy"] == ref_name) & (d.sources["day"] >= 2)]
     tot = src[["tap", "automation", "offline"]].sum()

@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "ruff>=0.6", "mypy>=1.10", "types-PyYAML", "build"]
 
 [project.scripts]
 doner-balance = "doner_balance.cli:main"
@@ -27,3 +27,31 @@ packages = ["doner_balance"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "PL"]
+ignore = [
+    "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR2004",  # complexity / magic numbers: report code is long by nature
+    "RUF001", "RUF002", "RUF003",                          # unicode arrows/dashes in report text are intended
+    "PLC0415",                                             # local imports keep CLI start-up fast
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["PLR2004", "B018"]
+
+[tool.mypy]
+python_version = "3.12"
+packages = ["doner_balance"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["matplotlib.*", "pandas.*"]
+ignore_missing_imports = true

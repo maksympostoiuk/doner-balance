@@ -224,6 +224,7 @@ class SimulationConfig(_Model):
     dt_offline_seconds: float = Field(gt=0)
     record_every_seconds: float = Field(gt=0)
     max_purchases_per_tick: int = Field(default=500, gt=0)
+    replan_every_seconds: float = Field(default=60, gt=0)
 
 
 class Target(_Model):

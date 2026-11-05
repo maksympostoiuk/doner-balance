@@ -21,7 +21,9 @@ from .model import Economy, GameState, Option
 from .sessions import session_schedule
 from .strategies import Strategy, make_strategy
 
-MILESTONES = ("first_upgrade", "first_manager", "cafe", "restaurant", "franchise", "first_prestige")
+def milestone_names(cfg: EconomyConfig) -> list[str]:
+    """All milestones the simulator records, in progression order (tier ids come from the config)."""
+    return ["first_upgrade", "first_manager", *[t.id for t in cfg.tiers[1:]], "first_prestige"]
 
 
 @dataclass
@@ -173,7 +175,12 @@ class Simulator:
         self._refresh()
 
     # ------------------------------------------------------------------ phases
-    def _offline(self, until: float) -> float:
+    def _offline(self, until: float, collect: bool = True) -> float:
+        """Advance through an offline gap; returns the earnings to credit at the next session.
+
+        ``collect=False`` is used for the time after the last session: nothing is credited
+        there, so no NPC events fire and no income is attributed to them.
+        """
         dt0 = self.cfg.simulation.dt_offline_seconds
         pending = 0.0
         elapsed = 0.0
@@ -182,10 +189,11 @@ class Simulator:
             if expire_modifiers(self.st, self.t):
                 self.emult = self.st.event_mult()
             credit_dt = max(min(dt, self.cap_s - elapsed), 0.0)
-            if credit_dt > 0 and self.offline_rate > 0:
+            if collect and credit_dt > 0 and self.offline_rate > 0:
                 pending += self.offline_rate * self.emult * credit_dt
                 self.events.account_income(self.st, self.offline_rate, credit_dt)
-            self.events.roll(self.st, self.t, dt)
+            if collect:
+                self.events.roll(self.st, self.t, dt)
             elapsed += dt
             self.t += dt
             self._record(active=False)
@@ -193,7 +201,7 @@ class Simulator:
 
     def _active(self, until: float) -> None:
         dt0 = self.cfg.simulation.dt_active_seconds
-        replan_every = 60.0
+        replan_every = self.cfg.simulation.replan_every_seconds
         next_replan = self.t + replan_every
         while self.t < until and not self.stopped:
             dt = min(dt0, until - self.t)
@@ -236,7 +244,7 @@ class Simulator:
                 "tiers_owned": self.st.tiers_owned, "prestiges": self.st.prestiges,
             })
         if self.t < horizon and not self.stopped:
-            self._offline(horizon)  # trailing offline time is never collected
+            self._offline(horizon, collect=False)  # trailing offline time is never collected
         self._record(active=False, force=True)
         return self._result()
 

@@ -15,7 +15,7 @@ import numpy as np
 
 from . import formulas as F
 from .config import NpcEvent, Response
-from .model import Economy, GameState, Modifier
+from .model import Economy, GameState, Modifier, modifier_key
 
 
 @dataclass
@@ -114,10 +114,9 @@ class EventEngine:
                 st.earn(g)
                 gained += g
             if eff.income_mult is not None:
-                key = f"{ev.id}.{resp.id}.{idx}"
+                key = modifier_key(ev.id, resp.id, idx)
                 if eff.duration_hours is None:
-                    stacks = sum(1 for m in st.modifiers if m.key == key)
-                    if stacks >= eff.max_stacks:
+                    if st.stacks(key) >= eff.max_stacks:
                         continue
                     st.modifiers.append(Modifier(ev.id, key, eff.income_mult, None))
                 else:

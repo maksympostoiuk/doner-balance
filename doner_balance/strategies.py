@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from . import formulas as F
 from .config import EconomyConfig, NpcEvent, Response, SessionProfile, StrategyConfig, StrategyParams
-from .model import Economy, GameState, Option, ProfileWeights, profile_weights
+from .model import Economy, GameState, Option, ProfileWeights, modifier_key, profile_weights
 
 
 @dataclass(frozen=True)
@@ -86,15 +86,22 @@ class Strategy:
         return after / now >= self.params.prestige_multiplier_threshold
 
     # ------------------------------------------------------------------ NPC responses
-    def expected_cost(self, resp: Response, st: GameState, income: float, eff_rate: float) -> float:
-        """Expected coin cost of a response (negative = profitable)."""
+    def expected_cost(self, resp: Response, st: GameState, income: float, eff_rate: float,
+                      ev: NpcEvent | None = None) -> float:
+        """Expected coin cost of a response (negative = profitable).
+
+        With ``ev`` given, permanent income effects that already reached ``max_stacks`` are
+        worth nothing (paying for a 6th "+3% forever" that cannot stack is a waste).
+        """
         horizon = self.params.event_value_horizon_hours * 3600.0
         total = F.amount_value(resp.cost, st.cash, income)
-        for eff in resp.effects:
+        for idx, eff in enumerate(resp.effects):
             exp = 0.0
             exp += F.amount_value(eff.cash_loss, st.cash, income)
             exp -= F.amount_value(eff.cash_gain, st.cash, income)
-            if eff.income_mult is not None:
+            maxed = (ev is not None and eff.duration_hours is None
+                     and st.stacks(modifier_key(ev.id, resp.id, idx)) >= eff.max_stacks)
+            if eff.income_mult is not None and not maxed:
                 dur = horizon if eff.duration_hours is None else min(eff.duration_hours * 3600.0, horizon)
                 exp += (1.0 - eff.income_mult) * eff_rate * dur
             total += eff.probability * exp
@@ -110,7 +117,7 @@ class Strategy:
                 return default
             return min(affordable, key=lambda r: F.amount_value(r.cost, st.cash, income))
         eff_rate = self.effective_rate(st)
-        return min(affordable, key=lambda r: self.expected_cost(r, st, income, eff_rate))
+        return min(affordable, key=lambda r: self.expected_cost(r, st, income, eff_rate, ev))
 
 
 def make_strategy(econ: Economy, name: str) -> Strategy:
