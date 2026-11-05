@@ -250,6 +250,7 @@ class AnalysisConfig(_Model):
     tap_share_high_pct: float = Field(le=100)
     casual_slowdown_warn: float = Field(gt=1)
     event_impact_warn_pct: float = Field(gt=0)
+    event_checkpoint_hours: float = Field(default=168, gt=0)
 
 
 class Currency(_Model):

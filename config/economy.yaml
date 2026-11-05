@@ -505,3 +505,4 @@ analysis:
   tap_share_high_pct: 60                  # taps above 60% after day 1 = automation too weak
   casual_slowdown_warn: 3                 # casual >3x slower than reference = retention risk
   event_impact_warn_pct: 10               # an NPC delaying a milestone by >10% is too harsh
+  event_checkpoint_hours: 168             # earnings compared at day 7 for event impact

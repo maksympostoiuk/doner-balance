@@ -10,9 +10,9 @@ Plan and status for the Doner Lamar economy simulator. Updated after every miles
 | M1 | Config model (pydantic) + default `config/economy.yaml` with comments; cost/income formulas | done |
 | M2 | Simulator: time-step loop, session model, tapping, offline earnings, NPC events (seeded) | done |
 | M3 | Player strategies: best ROI, cheapest first, saver, casual | done |
-| M4 | Analysis: milestones, dead zones, income/s, tap vs automation share, event impact; charts + CSV | todo |
+| M4 | Analysis: milestones, dead zones, income/s, tap vs automation share, event impact; charts + CSV | in progress |
 | M5 | Target pacing in config + tuning helper (distance to targets, suggested parameter changes) | done |
-| M6 | Godot JSON export + format docs + GDScript example | todo |
+| M6 | Godot JSON export + format docs + GDScript example | done |
 | M7 | REPORT.md generator with concrete recommendations; one CLI command for everything | todo |
 | M8 | Tests (formulas, income, events, offline, determinism), README, final balance pass + summary | todo |
 
@@ -40,3 +40,9 @@ Plan and status for the Doner Lamar economy simulator. Updated after every miles
   whole tier, overrides. `simulate(..., stop_when=milestone)` for fast measurements.
   Default config rewritten with tuned, rounded numbers; managers now cost ~1.5x their tier unlock
   (they used to cost up to 40x, leaving new tiers without offline income for days).
+- **M6** — `export.py` writes deterministic `export/economy.json` (format v1) with formula strings
+  and test vectors (costs, staff income at milestone boundaries, reputation, a full sample state);
+  `docs/GODOT_EXPORT.md` documents it; `godot/economy.gd` is a Godot 4 loader implementing the
+  formulas with `self_test()` against the test vectors.
+- **M4 (in progress)** — `analysis.py` (milestone table, dead zones in play time, daily income by
+  source, ablation-based NPC event impact over 5 seeds, response mix) and `charts.py`.
