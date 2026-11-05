@@ -8,8 +8,8 @@ Plan and status for the Doner Lamar economy simulator. Updated after every miles
 |---|-----------|--------|
 | M0 | Project scaffolding: CLAUDE.md, PROGRESS.md, pyproject, venv | done |
 | M1 | Config model (pydantic) + default `config/economy.yaml` with comments; cost/income formulas | done |
-| M2 | Simulator: time-step loop, session model, tapping, offline earnings, NPC events (seeded) | todo |
-| M3 | Player strategies: best ROI, cheapest first, saver, casual | todo |
+| M2 | Simulator: time-step loop, session model, tapping, offline earnings, NPC events (seeded) | done |
+| M3 | Player strategies: best ROI, cheapest first, saver, casual | done |
 | M4 | Analysis: milestones, dead zones, income/s, tap vs automation share, event impact; charts + CSV | todo |
 | M5 | Target pacing in config + tuning helper (distance to targets, suggested parameter changes) | todo |
 | M6 | Godot JSON export + format docs + GDScript example | todo |
@@ -24,3 +24,13 @@ Plan and status for the Doner Lamar economy simulator. Updated after every miles
   offline), `model.py` (GameState, income engine, purchase options), commented
   `config/economy.yaml` with 4 tiers, tap upgrades, staff, equipment, managers, 4 NPC events,
   offline rules, prestige, profiles, strategies, pacing targets. Formula tests pass.
+- **M2/M3** — `sessions.py` (evenly spread sessions in a waking window), `events.py` (Poisson NPC
+  events, one RNG stream per event type, pending-while-offline, responses with scaling costs,
+  probabilistic outcomes, timed/permanent income modifiers, per-event accounting),
+  `strategies.py` (best ROI / cheapest / saver policies on the *effective* income rate, smart vs
+  default NPC answers, prestige rule), `simulator.py` (1 s active / 60 s offline steps, offline
+  credit at session start, purchase + milestone logs, timeseries).
+  First balance pass: initial numbers exploded (income 1e8/s after 10 minutes) because low-level
+  milestone doublings + cheap equipment multipliers made marginal payback *fall* with level.
+  Fixed by sparser milestones (25/50/100/200), steeper growth (1.12-1.15) and pricier, smaller
+  multipliers. Remaining pacing gap is handled by the tuning helper (M5).
