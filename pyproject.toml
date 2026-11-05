@@ -26,3 +26,4 @@ packages = ["doner_balance"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]

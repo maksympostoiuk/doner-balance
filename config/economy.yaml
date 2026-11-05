@@ -1,0 +1,495 @@
+# =============================================================================
+#  Doner Lamar — "Shawarma Empire" economy config
+# =============================================================================
+#  Every balance number of the game lives in this file. The simulator, the
+#  analysis and the Godot export all read from here; nothing is hardcoded.
+#
+#  Conventions
+#  -----------
+#  * Money is "coins". Time is seconds unless a key says *_hours / *_minutes.
+#  * Leveled items cost   cost(level) = base_cost * cost_growth ^ level
+#    where `level` is how many levels you already own (the standard idle formula).
+#    cost_growth between 1.07 (gentle, long-lived items) and 1.15+ (items you
+#    should only buy a handful of) is the usual idle-game range.
+#  * Staff produce income automatically:
+#        staff_income = level * income * milestone_mult(level)
+#  * Tier income is multiplied by its equipment upgrades:
+#        (1 + sum(income upgrades)) * (1 + sum(speed upgrades)) * managers
+#  * Global multipliers: tier "brand" multipliers * reputation (prestige)
+#    * NPC event modifiers.
+#  * Tiers are cumulative: opening a cafe does not close the kiosk.
+#
+#  Scaling rule of thumb used for the default numbers: every tier is roughly
+#  x100..x1000 bigger than the previous one (costs and incomes), and inside a
+#  tier each next staff type costs ~x10-15 more and earns ~x8-10 more, so the
+#  newest staff is always slightly worse ROI at level 0 but catches up through
+#  milestones. This creates the classic "climb the ladder" feel.
+# =============================================================================
+
+name: Doner Lamar
+version: "0.1.0"
+
+currency:
+  id: coins
+  name: Coins
+  start_cash: 0          # the guy starts with empty pockets
+
+# Reaching these levels on any staff item multiplies that item's output.
+# Classic AdCap-style doubling. They create "just 3 more levels!" goals and
+# keep long-lived items relevant (cost grows exponentially, so the doubling
+# is what keeps payback times from exploding).
+staff_milestones:
+  - {level: 10,  mult: 2}   # early first taste of a milestone
+  - {level: 25,  mult: 2}
+  - {level: 50,  mult: 2}
+  - {level: 100, mult: 3}   # big one, a reason to grind a single item
+  - {level: 150, mult: 2}
+  - {level: 200, mult: 3}
+
+# -----------------------------------------------------------------------------
+# Tapping: making shawarma by hand.
+# -----------------------------------------------------------------------------
+tap:
+  base_value: 1          # coins per tap at the very start (1 shawarma = 1 coin)
+  upgrades:
+    - id: knife
+      name: Sharper knife
+      kind: flat         # +value coins per tap per level
+      value: 1           # doubles tap value at level 1 -> very noticeable
+      base_cost: 10      # ~4 seconds of tapping: first purchase almost instant
+      cost_growth: 1.15  # steep: hand-tapping must not outscale automation
+      max_level: 60
+    - id: wrapping
+      name: Wrapping technique
+      kind: pct          # +value (fraction) multiplier on tap value per level
+      value: 0.25        # +25% per level, additive (level 4 = x2)
+      base_cost: 250
+      cost_growth: 1.35  # few levels, each is an "event"
+      max_level: 20
+    - id: showman
+      name: Street showman
+      kind: income_share # each tap also earns value * automated income/sec
+      value: 0.01        # +1% of automated income per tap per level
+      base_cost: 20000   # mid-kiosk/cafe purchase that keeps tapping relevant later
+      cost_growth: 3.0   # very steep: 15 levels span the whole game
+      max_level: 15
+
+# -----------------------------------------------------------------------------
+# Business tiers: kiosk -> cafe -> restaurant -> franchise
+# -----------------------------------------------------------------------------
+tiers:
+  # ---------------------------------------------------------------- KIOSK
+  - id: kiosk
+    name: Metro kiosk
+    unlock_cost: 0              # starting tier, always free
+    tap_mult: 1                 # hand-made shawarma value multiplier at this tier
+    global_income_mult: 1       # brand boost to ALL income once owned
+    free_staff_levels: {}       # the guy works alone at first
+    staff:
+      - id: nephew
+        name: Nephew Arsen (helper)
+        base_cost: 15           # ~6 s of tapping
+        cost_growth: 1.09       # cheap, long-lived first generator
+        income: 0.5             # coins/sec per level (~30 s payback at level 0)
+      - id: grill_cook
+        name: Grill cook
+        base_cost: 180          # ~12x nephew
+        cost_growth: 1.11
+        income: 4               # ~8x nephew
+      - id: cashier
+        name: Cashier
+        base_cost: 2200
+        cost_growth: 1.12
+        income: 30
+    upgrades:
+      - id: garlic_sauce
+        name: Secret garlic sauce
+        kind: income            # +value price of kiosk shawarma per level
+        value: 0.10             # +10% kiosk income per level
+        base_cost: 400
+        cost_growth: 1.25
+        max_level: 20
+      - id: second_grill
+        name: Second vertical grill
+        kind: speed             # +value kiosk production speed per level
+        value: 0.15
+        base_cost: 900
+        cost_growth: 1.30
+        max_level: 10
+    managers:
+      - id: aunt_zina
+        name: Aunt Zina runs the kiosk
+        cost: 1500              # first offline income, affordable in session 1
+        income_mult: 1.0
+        enables_offline: true
+        offline_cap_hours_add: 0
+
+  # ---------------------------------------------------------------- CAFE
+  - id: cafe
+    name: Shawarma cafe
+    unlock_cost: 6000           # target: inside the first 10-minute session
+    tap_mult: 3                 # a cafe plate is worth 3 kiosk wraps
+    global_income_mult: 1.5     # "real place now": +50% to everything
+    free_staff_levels: {waiter: 1}
+    staff:
+      - id: waiter
+        name: Waiter
+        base_cost: 3000
+        cost_growth: 1.09
+        income: 25
+      - id: cafe_chef
+        name: Cafe chef
+        base_cost: 40000
+        cost_growth: 1.11
+        income: 220
+      - id: courier
+        name: Delivery courier
+        base_cost: 550000
+        cost_growth: 1.12
+        income: 2000
+    upgrades:
+      - id: lamb_menu
+        name: Lamb doner menu
+        kind: income
+        value: 0.12
+        base_cost: 60000
+        cost_growth: 1.22
+        max_level: 25
+      - id: rotisserie
+        name: Rotisserie oven
+        kind: speed
+        value: 0.10
+        base_cost: 150000
+        cost_growth: 1.25
+        max_level: 15
+    managers:
+      - id: rustam
+        name: Manager Rustam
+        cost: 80000
+        income_mult: 1.25        # a manager also optimises the floor (+25%)
+        enables_offline: true
+        offline_cap_hours_add: 1  # longer "while you were away" window
+
+  # ---------------------------------------------------------------- RESTAURANT
+  - id: restaurant
+    name: Doner restaurant
+    unlock_cost: 4000000        # target: during day 1
+    tap_mult: 10
+    global_income_mult: 2       # proper restaurant brand doubles everything
+    free_staff_levels: {sous_chef: 1}
+    staff:
+      - id: sous_chef
+        name: Sous-chef
+        base_cost: 2000000
+        cost_growth: 1.09
+        income: 9000
+      - id: head_chef
+        name: Head chef
+        base_cost: 30000000
+        cost_growth: 1.11
+        income: 80000
+      - id: catering
+        name: Catering team
+        base_cost: 450000000
+        cost_growth: 1.12
+        income: 750000
+    upgrades:
+      - id: interior
+        name: Designer interior
+        kind: income
+        value: 0.15
+        base_cost: 50000000
+        cost_growth: 1.22
+        max_level: 25
+      - id: tandoor
+        name: Charcoal tandoor
+        kind: speed
+        value: 0.10
+        base_cost: 120000000
+        cost_growth: 1.25
+        max_level: 15
+    managers:
+      - id: gm_lena
+        name: General manager Lena
+        cost: 60000000
+        income_mult: 1.5
+        enables_offline: true
+        offline_cap_hours_add: 2
+
+  # ---------------------------------------------------------------- FRANCHISE
+  - id: franchise
+    name: International franchise
+    unlock_cost: 30000000000    # target: about one week
+    tap_mult: 40
+    global_income_mult: 3
+    free_staff_levels: {franchisee: 1}
+    staff:
+      - id: franchisee
+        name: Franchisee
+        base_cost: 15000000000
+        cost_growth: 1.08
+        income: 50000000
+      - id: regional_director
+        name: Regional director
+        base_cost: 250000000000
+        cost_growth: 1.10
+        income: 450000000
+      - id: marketing_dept
+        name: Marketing department
+        base_cost: 4000000000000
+        cost_growth: 1.11
+        income: 4000000000
+    upgrades:
+      - id: tv_campaign
+        name: TV campaign
+        kind: income
+        value: 0.20
+        base_cost: 400000000000
+        cost_growth: 1.22
+        max_level: 25
+      - id: central_kitchen
+        name: Central kitchen logistics
+        kind: speed
+        value: 0.15
+        base_cost: 1000000000000
+        cost_growth: 1.25
+        max_level: 15
+    managers:
+      - id: coo
+        name: Chief operating officer
+        cost: 500000000000
+        income_mult: 2.0
+        enables_offline: true
+        offline_cap_hours_add: 4
+
+# -----------------------------------------------------------------------------
+# Offline earnings ("while you were away")
+# -----------------------------------------------------------------------------
+offline:
+  efficiency: 0.5        # offline production runs at 50% of the active rate
+  cap_hours: 2           # base cap; managers add hours (max 2+1+2+4 = 9 h)
+  requires_manager: true # a tier only earns offline once it has a manager
+
+# -----------------------------------------------------------------------------
+# Prestige: sell the empire for reputation
+# -----------------------------------------------------------------------------
+prestige:
+  enabled: true
+  currency_name: reputation
+  required_tier: franchise        # can only sell once you own a franchise
+  # reputation = floor(scale * (all_time_earnings / base_requirement) ^ exponent)
+  base_requirement: 1.0e+12
+  exponent: 0.5                   # square root: diminishing returns (standard)
+  scale: 10
+  bonus_per_point: 0.02           # +2% global income per reputation point
+  min_points: 10                  # the "sell" button needs at least 10 points
+
+# -----------------------------------------------------------------------------
+# NPC events
+# -----------------------------------------------------------------------------
+#  rate_per_hour: Poisson rate over calendar time. Events that fire while the
+#  player is offline wait for the next session (one pending per type).
+#  Amounts: total = flat + cash_fraction * cash + income_seconds * income/sec
+#  Effects: optional probability; income_mult with duration_hours (omit = permanent,
+#  then max_stacks limits how many times it can stack); cash_loss / cash_gain.
+events:
+  - id: supplier_deal
+    name: Supplier offers a meat deal
+    npc: supplier
+    min_tier: kiosk
+    min_hours_since_start: 0.5
+    rate_per_hour: 0.08          # ~2 offers per day
+    cooldown_hours: 6
+    default_response: accept
+    responses:
+      - id: accept
+        name: Take the weekly deal
+        cost: {income_seconds: 600}         # 10 min of income up front
+        effects:
+          - {income_mult: 1.2, duration_hours: 6}   # cheaper meat: +20% margin for 6 h
+      - id: contract
+        name: Sign a long-term contract
+        cost: {income_seconds: 5400}        # 1.5 h of income
+        effects:
+          - {income_mult: 1.03, max_stacks: 5}      # permanent +3%, up to 5 times
+      - id: decline
+        name: Decline
+        effects: []
+
+  - id: inspection
+    name: Sanitary inspection
+    npc: inspector
+    min_tier: kiosk
+    min_hours_since_start: 2
+    rate_per_hour: 0.04          # ~1 per day
+    cooldown_hours: 12
+    default_response: pay_fine
+    responses:
+      - id: pay_fine
+        name: Pay the fine
+        cost: {cash_fraction: 0.10, income_seconds: 120}
+        effects: []
+      - id: renovate
+        name: Do the required kitchen upgrade
+        cost: {income_seconds: 2400}        # 40 min of income
+        effects:
+          - {income_mult: 1.03, max_stacks: 5}      # clean kitchen: permanent +3%
+      - id: bribe
+        name: Slip him an envelope
+        cost: {cash_fraction: 0.03}
+        effects:
+          - probability: 0.3                         # 30%: caught
+            cash_loss: {cash_fraction: 0.30}
+            income_mult: 0.5
+            duration_hours: 4                        # closed for 4 h
+
+  - id: mafia
+    name: Mafia "protection" visit
+    npc: mafia
+    min_tier: cafe
+    min_hours_since_start: 6
+    rate_per_hour: 0.03          # ~0.7 per day
+    cooldown_hours: 24
+    default_response: pay
+    responses:
+      - id: pay
+        name: Pay protection
+        cost: {cash_fraction: 0.15}
+        effects: []
+      - id: refuse
+        name: Refuse
+        effects:
+          - probability: 0.4                         # 40%: they smash the place
+            cash_loss: {cash_fraction: 0.35}
+            income_mult: 0.6
+            duration_hours: 8
+      - id: police
+        name: Call the police
+        cost: {income_seconds: 900}
+        effects:
+          - {probability: 0.15, income_mult: 0.7, duration_hours: 8}
+
+  - id: rival_burger
+    name: Rival burger joint opens nearby
+    npc: rival
+    min_tier: cafe
+    min_hours_since_start: 12
+    rate_per_hour: 0.02          # ~0.5 per day
+    cooldown_hours: 36
+    default_response: ignore
+    responses:
+      - id: ignore
+        name: Ignore them
+        effects:
+          - {income_mult: 0.85, duration_hours: 24} # -15% demand for a day
+      - id: promo
+        name: Run a promo campaign
+        cost: {income_seconds: 1200}
+        effects:
+          - {income_mult: 0.97, duration_hours: 24}
+      - id: doner_burger
+        name: Launch a doner-burger
+        cost: {income_seconds: 3600}
+        effects:
+          - {income_mult: 1.05, duration_hours: 24}
+
+# -----------------------------------------------------------------------------
+# Player model
+# -----------------------------------------------------------------------------
+profiles:
+  regular:
+    sessions_per_day: 3          # "3 sessions of 10 minutes per day"
+    session_minutes: 10
+    day_start_hour: 8            # sessions spread evenly over 08:00-23:00
+    day_end_hour: 23             # -> 08:00, 13:00, 18:00
+    taps_per_second: 5           # while actively tapping
+    tapping_share: 0.5           # half of the session is spent tapping
+    event_response: smart        # picks the response with the best expected value
+  casual:
+    sessions_per_day: 2
+    session_minutes: 5
+    day_start_hour: 9
+    day_end_hour: 22
+    taps_per_second: 3
+    tapping_share: 0.3
+    event_response: default      # always clicks the default button
+
+strategies:
+  best_roi:
+    policy: best_roi
+    profile: regular
+    description: Buys the item with the shortest payback (cost / income gain), saving for it if needed.
+  cheapest:
+    policy: cheapest
+    profile: regular
+    description: Always buys the cheapest item that increases income.
+  saver:
+    policy: saver
+    profile: regular
+    description: Saves for the next tier whenever it is within reach, otherwise best ROI.
+  casual:
+    policy: best_roi
+    profile: casual
+    description: Best ROI, but only 2 short sessions per day, little tapping, default event answers.
+
+strategy_params:
+  saver_patience_hours: 2.0      # saver waits for the next tier if it is <= 2 real hours away
+  saver_pocket_fraction: 0.02    # ... but still buys items costing <= 2% of the tier price
+  prestige_multiplier_threshold: 2.0  # sell the empire when it at least doubles income
+  event_value_horizon_hours: 24  # how far ahead "smart" players value permanent effects
+
+simulation:
+  days: 21                       # calendar days simulated per run
+  seed: 42                       # master seed (reproducible)
+  extra_seeds: [1, 2, 3, 4]      # used for event-impact averaging
+  dt_active_seconds: 1           # time step while playing
+  dt_offline_seconds: 60         # time step while away
+  record_every_seconds: 300      # timeseries resolution
+  max_purchases_per_tick: 500
+
+# -----------------------------------------------------------------------------
+# Target pacing (assumptions — edit freely). Checked against reference_strategy.
+# clock: calendar = hours since install, active = hours of play time.
+# lever: dotted config path the tuning helper scales to move this milestone.
+# -----------------------------------------------------------------------------
+pacing:
+  reference_strategy: best_roi
+  targets:
+    - milestone: first_upgrade
+      hours: 0.00833             # 30 s of play
+      clock: active
+      tolerance: 0.5
+      lever: tap.upgrades.knife.base_cost
+      description: first purchase within 30 seconds
+    - milestone: cafe
+      hours: 0.1667              # 10 min of play = inside the first session
+      clock: active
+      tolerance: 0.3
+      lever: tiers.cafe.unlock_cost
+      description: cafe within the first session
+    - milestone: restaurant
+      hours: 24
+      clock: calendar
+      tolerance: 0.3
+      lever: tiers.restaurant.unlock_cost
+      description: restaurant on day 1
+    - milestone: franchise
+      hours: 168
+      clock: calendar
+      tolerance: 0.3
+      lever: tiers.franchise.unlock_cost
+      description: franchise in about a week
+    - milestone: first_prestige
+      hours: 336
+      clock: calendar
+      tolerance: 0.3
+      lever: prestige.base_requirement
+      description: first prestige in about two weeks
+
+analysis:
+  dead_zone_threshold_active_minutes: 5   # waiting >5 min of play for a meaningful buy
+  meaningful_gain_pct: 5                  # a purchase is "meaningful" if it adds >=5% income
+  tap_share_low_pct: 3                    # taps below 3% of income = tapping feels useless
+  tap_share_high_pct: 60                  # taps above 60% after day 1 = automation too weak
+  casual_slowdown_warn: 3                 # casual >3x slower than reference = retention risk
+  event_impact_warn_pct: 10               # an NPC delaying a milestone by >10% is too harsh
